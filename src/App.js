@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import UploadsPage from './pages/UploadsPage';
 import AnomaliesPage from './pages/AnomaliesPage';
 import MarkingGroupsPage from './pages/MarkingGroupsPage';
+import MarkingExamGroupsPage from './pages/MarkingExamGroupsPage';
 import ResultsPage from './pages/ResultsPage';
 import GroupResultsPage from './pages/GroupResultsPage';
 import CandidateResultsPage from './pages/CandidateResultsPage';
@@ -24,6 +25,8 @@ import BatchDetailsPage from './pages/BatchDetailsPage';
 import BatchImageDetailsPage from './pages/BatchImageDetailsPage';
 import SimpleUploadDetailsPage from './pages/SimpleUploadDetailsPage';
 import UploadDetailPage from './pages/UploadDetailPage';
+import ExamGroupsPage from './pages/ExamGroupsPage';
+import UploadExamGroupsPage from './pages/UploadExamGroupsPage';
 import './App.css';
 
 export default function App(){
@@ -38,6 +41,7 @@ export default function App(){
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/uploads" element={<ProtectedRoute><UploadsPage /></ProtectedRoute>} />
+          <Route path="/uploads/exam/:examId" element={<ProtectedRoute><UploadExamGroupsPage /></ProtectedRoute>} />
           <Route path="/uploads/:uploadId" element={<ProtectedRoute><UploadDetailPage /></ProtectedRoute>} />
           <Route path="/uploads/group/:groupId" element={<ProtectedRoute><GroupUploadsPage /></ProtectedRoute>} />
           <Route path="/uploads/group/:groupId/batch/:batchName" element={<ProtectedRoute><BatchDetailsPage /></ProtectedRoute>} />
@@ -46,6 +50,7 @@ export default function App(){
           <Route path="/anomalies" element={<ProtectedRoute><AnomaliesPage /></ProtectedRoute>} />
           <Route path="/anomalies/:groupId" element={<ProtectedRoute><AnomaliesPage /></ProtectedRoute>} />
           <Route path="/marking" element={<ProtectedRoute><MarkingGroupsPage /></ProtectedRoute>} />
+          <Route path="/marking/exam/:examId" element={<ProtectedRoute><MarkingExamGroupsPage /></ProtectedRoute>} />
           <Route path="/results" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />
           <Route path="/results/group/:groupId" element={<ProtectedRoute><GroupResultsPage /></ProtectedRoute>} />
           <Route path="/results/candidate/:candidateId" element={<ProtectedRoute><CandidateResultsPage /></ProtectedRoute>} />
@@ -53,6 +58,7 @@ export default function App(){
           <Route path="/schemes" element={<ProtectedRoute><SchemesPage /></ProtectedRoute>} />
           <Route path="/upload-scheme" element={<ProtectedRoute><UploadScheme /></ProtectedRoute>} />
           <Route path="/groups" element={<ProtectedRoute><GroupsPage /></ProtectedRoute>} />
+          <Route path="/groups/exam/:examId" element={<ProtectedRoute><ExamGroupsPage /></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
           </Routes>
         </ToastProvider>

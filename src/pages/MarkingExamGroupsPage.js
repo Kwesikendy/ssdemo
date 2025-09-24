@@ -1,30 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Play, 
-  CheckCircle, 
-  Circle, 
-  Loader2, 
-  Upload, 
-  AlertTriangle, 
-  RefreshCw, 
-  ChevronRight, 
-  BarChart3,
-  Users,
-  FileText,
-  Clock,
-  Target,
-  Zap,
-  Eye,
-  Trash2,
-  Edit3
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { Play, CheckCircle, Circle, Loader2, Upload, AlertTriangle, RefreshCw, ChevronLeft, Users, FileText } from 'lucide-react';
 import LoadingOverlay from '../components/LoadingOverlay';
 import Alert from '../components/Alert';
 import CardTable from '../components/CardTable';
-import { useToast } from '../components/ToastProvider';
 import api from '../api/axios';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useToast } from '../components/ToastProvider';
 
 // Color coding for different group types and statuses
 const getGroupTypeColor = (groupType) => {
@@ -68,10 +50,12 @@ const getMarkingStatusIcon = (status) => {
   }
 };
 
-export default function NewMarkingPage() {
-  const navigate = useNavigate();
+export default function MarkingExamGroupsPage() {
   const { success, error: showError, info } = useToast();
+  const navigate = useNavigate();
+  const { examId } = useParams();
   
+  const [exam, setExam] = useState(null);
   const [groups, setGroups] = useState([]);
   const [batches, setBatches] = useState({});
   const [loading, setLoading] = useState(true);
@@ -82,17 +66,26 @@ export default function NewMarkingPage() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
 
-  // Fetch groups data
+  // Fetch exam details
+  const fetchExamDetails = useCallback(async () => {
+    try {
+      const response = await api.get(`/exams/${examId}`);
+      setExam(response.data);
+    } catch (err) {
+      console.error('Failed to fetch exam details:', err);
+      setError('Failed to load exam details. Please try again.');
+    }
+  }, [examId]);
+
+  // Fetch groups for this exam
   const fetchGroups = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await api.get('/groups', { 
-        params: { per_page: 100, include_marking_status: true } 
-      });
+      const response = await api.get(`/exams/${examId}/groups`);
+      const groupsData = response.data.groups || [];
       
-      const groupsData = response.data.groups || response.data.data || [];
       setGroups(groupsData);
       
       // Initialize selected groups state
@@ -108,10 +101,10 @@ export default function NewMarkingPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [examId]);
 
   // Fetch batches for a specific group
-  const fetchBatches = useCallback(async (groupId) => {
+  const fetchBatches = async (groupId) => {
     try {
       const response = await api.get(`/groups/${groupId}/batches`);
       const batchesData = response.data.batches || [];
@@ -133,20 +126,68 @@ export default function NewMarkingPage() {
       
     } catch (err) {
       console.error('Failed to fetch batches:', err);
-      showError(`Failed to load batches for group ${groupId}`);
     }
-  }, [showError]);
+  };
 
   useEffect(() => {
+    fetchExamDetails();
     fetchGroups();
-  }, [fetchGroups]);
+  }, [fetchExamDetails, fetchGroups]);
+
+  // Check marking progress and show completion toasts
+  const checkMarkingProgress = async () => {
+    try {
+      const response = await api.get('/marking-groups/enhanced/progress');
+      
+      if (!response.data || !response.data.groups || !Array.isArray(response.data.groups)) {
+        console.warn('Invalid progress response structure:', response.data);
+        return;
+      }
+      
+      const groups = response.data.groups;
+      
+      // Check for completed markings
+      groups.forEach(groupProgress => {
+        const groupId = groupProgress.group_id;
+        if (groupProgress.marking_status === 'success' && markingInProgress[groupId]) {
+          success(`Marking completed successfully for group: ${groupProgress.group_name}`);
+          setMarkingInProgress(prev => ({
+            ...prev,
+            [groupId]: false
+          }));
+        } else if (groupProgress.marking_status === 'failed' && markingInProgress[groupId]) {
+          showError(`Marking failed for group: ${groupProgress.group_name}`);
+          setMarkingInProgress(prev => ({
+            ...prev,
+            [groupId]: false
+          }));
+        } else if (groupProgress.marking_status === 'not_started' && markingInProgress[groupId]) {
+          showError(
+            `Marking could not start for group: ${groupProgress.group_name}.`,
+            8000,
+            {
+              label: 'Configure Marking Schemes',
+              onClick: () => navigate('/schemes')
+            }
+          );
+          setMarkingInProgress(prev => ({
+            ...prev,
+            [groupId]: false
+          }));
+        }
+      });
+    } catch (err) {
+      console.error('Failed to check marking progress:', err);
+    }
+  };
 
   // Auto-refresh when marking is in progress
   useEffect(() => {
     let interval;
     if (autoRefresh || Object.values(markingInProgress).some(status => status)) {
-      interval = setInterval(() => {
-        fetchGroups();
+      interval = setInterval(async () => {
+        await fetchGroups();
+        await checkMarkingProgress();
         // Refresh batches for expanded groups
         Object.keys(expandedGroups).forEach(groupId => {
           if (expandedGroups[groupId]) {
@@ -158,26 +199,7 @@ export default function NewMarkingPage() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [autoRefresh, markingInProgress, expandedGroups, fetchGroups, fetchBatches]);
-
-  // Toggle group selection
-  const toggleGroupSelection = (groupId) => {
-    setSelectedGroups(prev => ({
-      ...prev,
-      [groupId]: !prev[groupId]
-    }));
-  };
-
-  // Toggle batch selection
-  const toggleBatchSelection = (groupId, batchName) => {
-    setSelectedBatches(prev => ({
-      ...prev,
-      [groupId]: {
-        ...prev[groupId],
-        [batchName]: !prev[groupId]?.[batchName]
-      }
-    }));
-  };
+  }, [autoRefresh, markingInProgress, expandedGroups, fetchGroups]);
 
   // Toggle group expansion
   const toggleGroupExpansion = async (groupId) => {
@@ -200,6 +222,7 @@ export default function NewMarkingPage() {
     
     try {
       setError(null);
+      info(`Starting marking for ${groupIds.length} group(s)...`);
       
       // Update marking progress state
       groupIds.forEach(groupId => {
@@ -209,11 +232,11 @@ export default function NewMarkingPage() {
         }));
       });
       
-      const response = await api.post('/marking-groups/start', { 
+      await api.post('/marking-groups/enhanced/start', { 
         group_ids: groupIds 
       });
       
-      success(`Marking started for ${groupIds.length} group(s)`);
+      success(`Marking started successfully for ${groupIds.length} group(s). The process is running in the background.`);
       
       // Enable auto-refresh
       setAutoRefresh(true);
@@ -221,9 +244,33 @@ export default function NewMarkingPage() {
       // Refresh data
       await fetchGroups();
       
+      // Check for immediate failures after a short delay
+      setTimeout(async () => {
+        await checkMarkingProgress();
+      }, 2000);
+      
     } catch (err) {
       console.error('Failed to start marking:', err);
-      showError('Failed to start marking: ' + (err.response?.data?.message || err.message));
+      let errorMessage = 'Failed to start marking: ' + (err.response?.data?.message || err.message);
+      
+      // Handle specific error cases with action buttons
+      let actionButton = null;
+      if (err.response?.data?.message?.includes('no marking schemes configured')) {
+        errorMessage = 'No marking schemes are configured for the selected groups.';
+        actionButton = {
+          label: 'Create Marking Schemes',
+          onClick: () => navigate('/schemes')
+        };
+      } else if (err.response?.data?.message?.includes('No scripts found')) {
+        errorMessage = 'No scripts found in the selected groups.';
+        actionButton = {
+          label: 'Upload Scripts',
+          onClick: () => navigate('/uploads')
+        };
+      }
+      
+      setError(errorMessage);
+      showError(errorMessage, 8000, actionButton);
       
       // Reset marking progress state
       groupIds.forEach(groupId => {
@@ -241,13 +288,14 @@ export default function NewMarkingPage() {
     
     try {
       setError(null);
+      info(`Starting marking for ${batchNames.length} batch(es)...`);
       
-      const response = await api.post('/marking-batches/start', {
+      await api.post('/marking-batches/start', {
         group_id: groupId,
         batch_names: batchNames
       });
       
-      success(`Marking started for ${batchNames.length} batch(es)`);
+      success(`Marking started successfully for ${batchNames.length} batch(es). The process is running in the background.`);
       
       // Enable auto-refresh
       setAutoRefresh(true);
@@ -258,7 +306,26 @@ export default function NewMarkingPage() {
       
     } catch (err) {
       console.error('Failed to start batch marking:', err);
-      showError('Failed to start batch marking: ' + (err.response?.data?.message || err.message));
+      let errorMessage = 'Failed to start batch marking: ' + (err.response?.data?.message || err.message);
+      
+      // Handle specific error cases with action buttons
+      let actionButton = null;
+      if (err.response?.data?.message?.includes('no marking schemes configured')) {
+        errorMessage = 'No marking schemes are configured for the selected batches.';
+        actionButton = {
+          label: 'Create Marking Schemes',
+          onClick: () => navigate('/schemes')
+        };
+      } else if (err.response?.data?.message?.includes('No scripts found')) {
+        errorMessage = 'No scripts found in the selected batches.';
+        actionButton = {
+          label: 'Upload Scripts',
+          onClick: () => navigate('/uploads')
+        };
+      }
+      
+      setError(errorMessage);
+      showError(errorMessage, 8000, actionButton);
     }
   };
 
@@ -288,7 +355,11 @@ export default function NewMarkingPage() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2">
-              <h3 className="text-sm font-medium text-gray-900 truncate">
+              <h3 
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-800 truncate cursor-pointer transition-colors"
+                onClick={() => navigate(`/uploads/group/${row.id}`)}
+                title="Click to view group uploads"
+              >
                 {row.name}
               </h3>
               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getGroupTypeColor(row.group_type)}`}>
@@ -342,7 +413,7 @@ export default function NewMarkingPage() {
               onClick={() => toggleGroupExpansion(row.id)}
               className="inline-flex items-center px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
             >
-              <Eye className="h-4 w-4 mr-1" />
+              <Users className="h-4 w-4 mr-1" />
               View Batches
             </button>
           ) : (
@@ -360,13 +431,13 @@ export default function NewMarkingPage() {
             </button>
           )}
           
-          <button
-            onClick={() => navigate(`/uploads/group/${row.id}`)}
+          <Link
+            to={`/uploads/group/${row.id}`}
             className="inline-flex items-center px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
           >
             <Upload className="h-4 w-4 mr-1" />
             Uploads
-          </button>
+          </Link>
         </div>
       )
     }
@@ -385,7 +456,11 @@ export default function NewMarkingPage() {
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-medium text-gray-900 truncate">
+            <h4 
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-800 truncate cursor-pointer transition-colors"
+              onClick={() => navigate(`/uploads/group/${row.groupId}/batch/${encodeURIComponent(row.batchName)}`)}
+              title="Click to view batch details"
+            >
               {row.batchName}
             </h4>
             <p className="text-sm text-gray-500">
@@ -425,13 +500,13 @@ export default function NewMarkingPage() {
             Mark
           </button>
           
-          <button
-            onClick={() => navigate(`/uploads/group/${row.groupId}/batch/${encodeURIComponent(row.batchName)}`)}
+          <Link
+            to={`/uploads/group/${row.groupId}/batch/${encodeURIComponent(row.batchName)}`}
             className="inline-flex items-center px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
           >
-            <Eye className="h-4 w-4 mr-1" />
+            <Users className="h-4 w-4 mr-1" />
             View
-          </button>
+          </Link>
         </div>
       )
     }
@@ -450,11 +525,22 @@ export default function NewMarkingPage() {
             transition={{ duration: 0.5 }}
             className="flex items-center justify-between mb-6"
           >
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Marking Dashboard</h1>
-              <p className="mt-2 text-gray-600">
-                Manage and monitor marking for all groups and batches
-              </p>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/marking')}
+                className="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back to Marking
+              </button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {exam?.name || 'Exam Groups'}
+                </h1>
+                <p className="mt-2 text-gray-600">
+                  Manage and monitor marking for groups in this exam
+                </p>
+              </div>
             </div>
             
             <div className="flex items-center space-x-4">
@@ -536,12 +622,16 @@ export default function NewMarkingPage() {
                 toggleGroupExpansion(row.id);
               }
             }}
-            emptyMessage="No groups found"
+            emptyMessage="No groups found in this exam"
           />
         </motion.div>
 
         {/* Expanded Batches */}
-        <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
           {Object.entries(expandedGroups).map(([groupId, isExpanded]) => {
             if (!isExpanded || !batches[groupId]) return null;
             
@@ -587,7 +677,7 @@ export default function NewMarkingPage() {
                         onClick={() => toggleGroupExpansion(groupId)}
                         className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md bg-white border border-purple-300 text-purple-700 hover:bg-purple-50"
                       >
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronLeft className="w-4 h-4" />
                         Collapse
                       </button>
                     </div>
@@ -627,7 +717,7 @@ export default function NewMarkingPage() {
               </motion.div>
             );
           })}
-        </AnimatePresence>
+        </motion.div>
       </div>
     </div>
   );

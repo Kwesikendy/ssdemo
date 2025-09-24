@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+// Removed arrow icons - using text-based pagination
 
 export default function DataTable({ 
   data = [], 
@@ -204,57 +204,39 @@ export default function DataTable({
                   {' '}results
                 </p>
               </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                  <button
-                    onClick={() => onPageChange(1)}
-                    disabled={pagination.page <= 1}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronsLeft className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => onPageChange(pagination.page - 1)}
-                    disabled={pagination.page <= 1}
-                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  
-                  {/* Page numbers */}
-                  {[...Array(Math.min(5, pagination.total_pages))].map((_, i) => {
-                    const pageNum = pagination.page - 2 + i;
-                    if (pageNum < 1 || pageNum > pagination.total_pages) return null;
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => onPageChange(pagination.page - 1)}
+                  disabled={pagination.page <= 1}
+                  className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, pagination.total_pages) }, (_, i) => {
+                    const pageNum = i + 1;
                     return (
                       <button
                         key={pageNum}
                         onClick={() => onPageChange(pageNum)}
-                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                          pageNum === pagination.page
-                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        className={`px-3 py-1 text-sm font-medium rounded-md ${
+                          pagination.page === pageNum
+                            ? 'bg-indigo-600 text-white'
+                            : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
                         }`}
                       >
                         {pageNum}
                       </button>
                     );
                   })}
-                  
-                  <button
-                    onClick={() => onPageChange(pagination.page + 1)}
-                    disabled={pagination.page >= pagination.total_pages}
-                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => onPageChange(pagination.total_pages)}
-                    disabled={pagination.page >= pagination.total_pages}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronsRight className="h-5 w-5" />
-                  </button>
-                </nav>
+                </div>
+                <button
+                  onClick={() => onPageChange(pagination.page + 1)}
+                  disabled={pagination.page >= pagination.total_pages}
+                  className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, UploadCloud, RefreshCw, Eye, Trash2, Edit3, Loader2 } from 'lucide-react';
-import DataTable from '../components/DataTable';
+import CardTable from '../components/CardTable';
 import LoadingOverlay from '../components/LoadingOverlay';
 import LoadingSpinner from '../components/LoadingSpinner';
 import LoadingProgressBar from '../components/LoadingProgressBar';
@@ -32,31 +32,12 @@ export default function GroupUploadsPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [batchName, setBatchName] = useState('');
+  const [selectedItems, setSelectedItems] = useState([]);
   const pollRef = useRef(null);
   
   // Use custom hooks
   const { deletingBatch, handleViewBatch, handleDeleteBatch, handleGoToMarkBatch } = useBatchOperations(groupId);
 
-  // Debug function to fix group type
-  const handleFixGroupType = async () => {
-    if (!group) return;
-    
-    try {
-      console.log('Current group type:', group.group_type);
-      const newType = group.group_type === 'batch' ? 'simple' : 'batch';
-      console.log('Changing to:', newType);
-      
-      await api.put(`/groups/${groupId}/group-type`, {
-        group_type: newType
-      });
-      
-      toast.success(`Group type changed to ${newType}`);
-      fetchGroup(); // Refresh group data
-    } catch (err) {
-      console.error('Failed to update group type', err);
-      toast.error('Failed to update group type');
-    }
-  };
 
   const fetchGroup = useCallback(async () => {
     try {
@@ -328,7 +309,11 @@ export default function GroupUploadsPage() {
             </div>
           </div>
           <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">
+            <div 
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-800 cursor-pointer transition-colors"
+              onClick={() => handleViewBatch(value)}
+              title="Click to view batch details"
+            >
               {value || 'Unnamed Batch'}
             </div>
             <div className="text-xs text-gray-500">
@@ -512,15 +497,6 @@ export default function GroupUploadsPage() {
             >
               <UploadCloud className="h-4 w-4 mr-2" /> Upload scripts
             </button>
-            
-            {/* Debug button - remove this in production */}
-            <button
-              onClick={handleFixGroupType}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              title={`Current type: ${group?.group_type || 'unknown'}`}
-            >
-              Fix Group Type
-            </button>
           </div>
         </div>
 
@@ -542,12 +518,31 @@ export default function GroupUploadsPage() {
               />
             </div>
           </div>
-          <DataTable
+          <CardTable
             data={group && group.group_type === 'batch' ? batches : uploads}
             columns={group && group.group_type === 'batch' ? batchColumns : columns}
             loading={loading}
-            pagination={group && group.group_type === 'batch' ? null : pagination}
-            onPageChange={group && group.group_type === 'batch' ? null : (page) => setPagination(prev => ({ ...prev, page }))}
+            searchable={true}
+            selectable={true}
+            onSelectionChange={setSelectedItems}
+            searchPlaceholder={
+              group && group.group_type === 'batch' 
+                ? 'Search batches...' 
+                : group && group.group_type === 'simple' 
+                  ? 'Search images...' 
+                  : 'Search uploads...'
+            }
+            searchFields={['name', 'original_filename', 'display_name']}
+            bulkActions={[
+              {
+                label: 'Delete Selected',
+                variant: 'danger',
+                icon: Trash2,
+                onClick: (selected) => {
+                  console.log('Delete selected items:', selected);
+                }
+              }
+            ]}
             emptyMessage={
               group && group.group_type === 'batch' 
                 ? 'No batches found in this group' 
@@ -567,9 +562,9 @@ export default function GroupUploadsPage() {
                   <input type="radio" name="mode" value="images" checked={mode === 'images'} onChange={() => setMode('images')} className="text-indigo-600 border-gray-300" />
                   <span className="ml-2">Images</span>
                 </label>
-                <label className="inline-flex items-center">
-                  <input type="radio" name="mode" value="pdfs" checked={mode === 'pdfs'} onChange={() => setMode('pdfs')} className="text-indigo-600 border-gray-300" />
-                  <span className="ml-2">PDFs</span>
+                <label className="inline-flex items-center opacity-50 cursor-not-allowed">
+                  <input type="radio" name="mode" value="pdfs" checked={mode === 'pdfs'} onChange={() => setMode('pdfs')} className="text-indigo-600 border-gray-300" disabled />
+                  <span className="ml-2">PDFs <span className="text-xs text-gray-500">(Coming Soon)</span></span>
                 </label>
               </div>
             </div>
@@ -591,7 +586,7 @@ export default function GroupUploadsPage() {
               <input
                 type="file"
                 multiple
-                accept={mode === 'images' ? 'image/*' : 'application/pdf'}
+                accept="image/*"
                 onChange={(e) => setFiles(Array.from(e.target.files || []))}
                 className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
               />

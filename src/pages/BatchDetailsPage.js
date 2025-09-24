@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../components/ToastProvider';
 import api from '../api/axios';
-import DataTable from '../components/DataTable';
+import CardTable from '../components/CardTable';
 import LoadingOverlay from '../components/LoadingOverlay';
 import useImageOperations from '../hooks/useImageOperations';
 import { isProcessing } from '../utils/statusUtils';
@@ -231,7 +231,11 @@ const BatchDetailsPage = () => {
             </div>
           </div>
           <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">
+            <div 
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-800 cursor-pointer transition-colors"
+              onClick={() => handleViewImage(row)}
+              title="Click to view image details"
+            >
               Image {row.id.slice(0, 8)}...
             </div>
             <div className="text-xs text-gray-500">
@@ -439,10 +443,29 @@ const BatchDetailsPage = () => {
             </p>
           </div>
           
-          <DataTable
+          <CardTable
             data={images}
             columns={imageColumns}
             loading={refreshing}
+            searchable={true}
+            selectable={true}
+            onSelectionChange={(selected) => {
+              // Handle image selection
+              console.log('Selected images:', selected);
+            }}
+            searchPlaceholder="Search images..."
+            searchFields={['id', 'ocr_text']}
+            bulkActions={[
+              {
+                label: 'Delete Selected',
+                variant: 'danger',
+                icon: Trash2,
+                onClick: (selected) => {
+                  // Handle bulk delete images
+                  console.log('Delete selected images:', selected);
+                }
+              }
+            ]}
             emptyMessage="No images found in this batch"
             className="min-h-[400px]"
           />

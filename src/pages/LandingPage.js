@@ -74,7 +74,7 @@ export default function LandingPage() {
             <BigFeature
               icon={Upload}
               title="Flexible intake"
-              desc="Drag‑and‑drop PDFs or images, auto‑classified by group and scheme."
+              desc="Drag‑and‑drop images, auto‑classified by group and scheme."
               bullets={["Bulk uploads","File validation","Retry & resume"]}
             />
             <BigFeature

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Search, Filter, FileText, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import DataTable from '../components/DataTable';
+import CardTable from '../components/CardTable';
 import StatsCard from '../components/StatsCard';
 import LoadingOverlay from '../components/LoadingOverlay';
 import Alert from '../components/Alert';
@@ -21,6 +21,7 @@ export default function SchemesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGroup, setFilterGroup] = useState('all');
   const [groups, setGroups] = useState([]);
+  const [selectedSchemes, setSelectedSchemes] = useState([]);
   const [deleteModal, setDeleteModal] = useState({ open: false, scheme: null });
   const [viewModal, setViewModal] = useState({ open: false, scheme: null });
   const [editModal, setEditModal] = useState({ open: false, scheme: null, saving: false });
@@ -437,18 +438,32 @@ export default function SchemesPage() {
           </div>
         </motion.div>
 
-        {/* Data Table */}
+        {/* Card Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <DataTable
+          <CardTable
             data={schemes}
             columns={columns}
             loading={loading}
-            pagination={pagination}
-            onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+            searchable={true}
+            selectable={true}
+            onSelectionChange={setSelectedSchemes}
+            searchPlaceholder="Search marking schemes..."
+            searchFields={['name', 'subject']}
+            bulkActions={[
+              {
+                label: 'Delete Selected',
+                variant: 'danger',
+                icon: Trash2,
+                onClick: (selected) => {
+                  console.log('Delete selected schemes:', selected);
+                }
+              }
+            ]}
+            emptyMessage="No marking schemes found"
           />
         </motion.div>
       </div>
@@ -545,15 +560,16 @@ export default function SchemesPage() {
               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 opacity-50 cursor-not-allowed">
             <input
               id="edit-has-math"
               type="checkbox"
               checked={!!editModal.scheme?.has_math}
               onChange={(e) => setEditModal(prev => ({ ...prev, scheme: { ...prev.scheme, has_math: e.target.checked } }))}
+              disabled
               className="h-4 w-4 text-purple-600 border-gray-300 rounded"
             />
-            <label htmlFor="edit-has-math" className="text-sm text-gray-700">Has Math</label>
+            <label htmlFor="edit-has-math" className="text-sm text-gray-700">Has Math <span className="text-xs text-gray-500">(Coming Soon)</span></label>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Groups</label>

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Filter, RefreshCw, AlertTriangle, Save } from 'lucide-react';
-import DataTable from '../components/DataTable';
+import { Filter, RefreshCw, AlertTriangle, Save, CheckCircle } from 'lucide-react';
+import CardTable from '../components/CardTable';
 import LoadingOverlay from '../components/LoadingOverlay';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatusBadge from '../components/StatusBadge';
@@ -20,6 +20,8 @@ export default function AnomaliesPage() {
   const [error, setError] = useState(null);
   const [severity, setSeverity] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedGroups, setSelectedGroups] = useState([]);
+  const [selectedAnomalies, setSelectedAnomalies] = useState([]);
 
   // Group list
   const [groups, setGroups] = useState([]);
@@ -194,11 +196,51 @@ export default function AnomaliesPage() {
         {error && <Alert type="error" message={error} onClose={() => setError(null)} className="mb-4" />}
 
         {!inGroupMode ? (
-          <DataTable data={groups} columns={groupColumns} loading={loading} pagination={groupsPagination} onPageChange={(page) => setGroupsPagination(prev => ({ ...prev, page }))} />
+          <CardTable 
+            data={groups} 
+            columns={groupColumns} 
+            loading={loading} 
+            searchable={true}
+            selectable={true}
+            onSelectionChange={setSelectedGroups}
+            searchPlaceholder="Search groups..."
+            searchFields={['name', 'description']}
+            bulkActions={[
+              {
+                label: 'Resolve Selected',
+                variant: 'default',
+                icon: CheckCircle,
+                onClick: (selected) => {
+                  console.log('Resolve selected groups:', selected);
+                }
+              }
+            ]}
+            emptyMessage="No groups found" 
+          />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-3">
-              <DataTable data={anomalies} columns={anomalyColumns} loading={loading} pagination={pagination} onPageChange={(page) => setPagination(prev => ({ ...prev, page }))} />
+              <CardTable 
+                data={anomalies} 
+                columns={anomalyColumns} 
+                loading={loading} 
+                searchable={true}
+                selectable={true}
+                onSelectionChange={setSelectedAnomalies}
+                searchPlaceholder="Search anomalies..."
+                searchFields={['anomaly_type', 'description']}
+                bulkActions={[
+                  {
+                    label: 'Resolve Selected',
+                    variant: 'default',
+                    icon: CheckCircle,
+                    onClick: (selected) => {
+                      console.log('Resolve selected anomalies:', selected);
+                    }
+                  }
+                ]}
+                emptyMessage="No anomalies found" 
+              />
             </div>
             <div className="lg:col-span-2">
               {!selected ? (

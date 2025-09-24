@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Users, Eye, RefreshCw } from 'lucide-react';
+import { Search, Users, Eye, RefreshCw, FileText, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import DataTable from '../components/DataTable';
+import CardTable from '../components/CardTable';
 import StatsCard, { UploadsStatsCard, CandidatesStatsCard, MarkedStatsCard } from '../components/StatsCard';
 import LoadingOverlay from '../components/LoadingOverlay';
 import StatusBadge from '../components/StatusBadge';
@@ -15,7 +15,7 @@ export default function UploadsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const toast = useToast();
-  const [groups, setGroups] = useState([]);
+  const [hierarchy, setHierarchy] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,7 +31,7 @@ export default function UploadsPage() {
   useEffect(() => {
     fetchGroups();
     fetchStats();
-  }, [pagination.page, pagination.per_page, searchTerm]);
+  }, [searchTerm]);
 
   const fetchGroups = async (showLoader = true) => {
     try {
@@ -40,24 +40,52 @@ export default function UploadsPage() {
       } else {
         setRefreshing(true);
       }
-      const params = {
-        page: pagination.page,
-        per_page: pagination.per_page,
-        search: searchTerm
-      };
 
-      const response = await api.get('/groups', { params });
-      const body = response.data;
-      if (body && body.groups) {
-        setGroups(body.groups);
-        setPagination(body.pagination || pagination);
-      } else if (body && body.data) {
-        setGroups(body.data.groups || []);
-        setPagination(body.meta || pagination);
-      } else {
-        setGroups([]);
-      }
+      // Fetch hierarchical structure instead of flat groups
+      const response = await api.get('/exams/hierarchy');
+      const hierarchyData = response.data.hierarchy || [];
+      
+      // Create a flat list with groups and exams
+      const flatList = [];
+
+      hierarchyData.forEach(exam => {
+        if (exam.is_default) {
+          // Default exam groups go directly to the list
+          if (exam.groups && exam.groups.length > 0) {
+            exam.groups.forEach(group => {
+              flatList.push({
+                ...group,
+                exam_name: exam.name,
+                exam_id: exam.id,
+                is_default_exam: true,
+                is_group: true
+              });
+            });
+          }
+        } else {
+          // Add exam as a row
+          flatList.push({
+            id: exam.id,
+            name: exam.name,
+            exam_name: exam.name,
+            exam_id: exam.id,
+            is_default_exam: false,
+            is_group: false,
+            group_count: exam.groups ? exam.groups.length : 0,
+            groups: exam.groups || [] // Store groups for "View Groups" action
+          });
+        }
+      });
+
+      setHierarchy(flatList);
       setError(null);
+      
+      // Update pagination state
+      setPagination(prev => ({
+        ...prev,
+        total: flatList.length,
+        total_pages: Math.ceil(flatList.length / prev.per_page)
+      }));
     } catch (err) {
       const errorMsg = 'Failed to fetch groups. Please try again.';
       setError(errorMsg);
@@ -88,9 +116,24 @@ export default function UploadsPage() {
     navigate(`/uploads/group/${group.id}`);
   };
 
+  const handleViewExamGroups = (exam) => {
+    navigate(`/uploads/exam/${exam.id}`);
+  };
+
   const handleRefresh = () => {
     fetchGroups(false);
     fetchStats();
+  };
+
+  const getGroupTypeColor = (groupType) => {
+    switch (groupType) {
+      case 'batch':
+        return 'bg-blue-100 text-blue-800';
+      case 'simple':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   const formatDate = (dateString) => {
@@ -105,59 +148,130 @@ export default function UploadsPage() {
 
   const columns = [
     {
-      key: 'name',
-      title: 'Group',
-      sortable: true,
-      render: (value, row) => (
-        <div className="flex items-center">
-          <div className="flex-shrink-0 h-10 w-10">
-            <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-              <Users className="h-5 w-5 text-indigo-600" />
+      key: 'item_info',
+      title: 'Name',
+      render: (value, row) => {
+        if (row.is_group) {
+          // Group row
+          return (
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${getGroupTypeColor(row.group_type)}`}>
+                  <Users className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center space-x-2">
+                  <h3 
+                    className="text-sm font-medium text-indigo-600 hover:text-indigo-800 truncate cursor-pointer transition-colors"
+                    onClick={() => handleViewGroupUploads(row)}
+                    title="Click to view group uploads"
+                  >
+                    {row.name}
+                  </h3>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getGroupTypeColor(row.group_type)}`}>
+                    {row.group_type}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500">
+                  {row.description || 'No description'}
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">{value}</div>
-            <div className="text-sm text-gray-500">{row.description || 'No description'}</div>
-          </div>
-        </div>
-      )
+          );
+        } else {
+          // Exam row
+          return (
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-indigo-600" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center space-x-2">
+                  <h3 
+                    className="text-sm font-medium text-indigo-600 hover:text-indigo-800 truncate cursor-pointer transition-colors"
+                    onClick={() => handleViewExamGroups(row)}
+                    title="Click to view exam groups"
+                  >
+                    {row.name}
+                  </h3>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    Exam
+                  </span>
+                </div>
+                <p className="text-sm text-indigo-600">
+                  {row.group_count} group(s)
+                </p>
+              </div>
+            </div>
+          );
+        }
+      }
     },
     {
       key: 'upload_count',
       title: 'Uploads',
-      sortable: true,
-      render: (value) => (
-        <span className="text-sm text-gray-900">{value || 0}</span>
-      )
+      render: (value, row) => {
+        if (row.is_group) {
+          return (
+            <span className="text-sm text-gray-900">{row.upload_count || 0}</span>
+          );
+        } else {
+          return (
+            <span className="text-sm text-gray-500">-</span>
+          );
+        }
+      }
     },
     {
       key: 'created_at',
       title: 'Created',
-      sortable: true,
-      render: (value) => (
-        <span className="text-sm text-gray-500">{formatDate(value)}</span>
-      )
+      render: (value, row) => {
+        if (row.is_group) {
+          return (
+            <span className="text-sm text-gray-500">{formatDate(row.created_at)}</span>
+          );
+        } else {
+          return (
+            <span className="text-sm text-gray-500">{formatDate(row.created_at)}</span>
+          );
+        }
+      }
     },
     {
       key: 'actions',
       title: 'Actions',
-      render: (value, row) => (
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => handleViewGroupUploads(row)}
-            className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-indigo-50"
-            title="View Uploads"
-          >
-            <Eye className="h-4 w-4" />
-          </button>
-        </div>
-      )
+      render: (value, row) => {
+        if (!row.is_group) {
+          // Exam row - show view groups action (as backup to clicking the name)
+          return (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleViewExamGroups(row)}
+                className="inline-flex items-center px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+              >
+                <ChevronRight className="h-4 w-4 mr-1" />
+                View Groups
+              </button>
+            </div>
+          );
+        } else {
+          // Group row - no action needed since name is clickable
+          return (
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-400 italic">Click name to view</span>
+            </div>
+          );
+        }
+      }
     }
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-  <LoadingOverlay isLoading={loading && groups.length === 0} />
+  <LoadingOverlay isLoading={loading && hierarchy.length === 0} />
       
   <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px] py-8">
         {/* Header */}
@@ -253,18 +367,27 @@ export default function UploadsPage() {
           </div>
         </motion.div>
 
-        {/* Data Table */}
+        {/* Card Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <DataTable
-            data={groups}
+          <CardTable
+            data={hierarchy}
             columns={columns}
             loading={loading}
-            pagination={pagination}
-            onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+            searchable={true}
+            selectable={false} // No checkboxes on uploads page
+            searchPlaceholder="Search groups and exams..."
+            searchFields={['name', 'description']}
+            onRowClick={(row) => {
+              if (!row.is_group) {
+                // If it's an exam, navigate to exam groups page
+                handleViewExamGroups(row);
+              }
+            }}
+            emptyMessage="No groups or exams found"
           />
         </motion.div>
       </div>
