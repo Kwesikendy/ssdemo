@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Search, Filter, FileText, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import CardTable from '../components/CardTable';
+import DataTable from '../components/DataTable';
 import StatsCard from '../components/StatsCard';
 import LoadingOverlay from '../components/LoadingOverlay';
 import Alert from '../components/Alert';
@@ -21,7 +21,6 @@ export default function SchemesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGroup, setFilterGroup] = useState('all');
   const [groups, setGroups] = useState([]);
-  const [selectedSchemes, setSelectedSchemes] = useState([]);
   const [deleteModal, setDeleteModal] = useState({ open: false, scheme: null });
   const [viewModal, setViewModal] = useState({ open: false, scheme: null });
   const [editModal, setEditModal] = useState({ open: false, scheme: null, saving: false });
@@ -220,41 +219,57 @@ export default function SchemesPage() {
       )
     },
     {
-      key: 'groups',
-      title: 'Groups',
+      key: 'group_name',
+      title: 'Group',
       sortable: true,
       render: (value, row) => {
-        // Get groups from the row data
-        const groups = row.groups || [];
-        
-        if (groups.length === 0) {
-          return (
-            <span className="text-sm text-gray-500">No groups</span>
-          );
+        // Handle different group data formats
+        let groupName = value;
+        if (!groupName && row.groups && row.groups.length > 0) {
+          groupName = row.groups[0].name;
         }
-
-        // Show first 4 groups
-        const displayGroups = groups.slice(0, 4);
-        const remainingCount = groups.length - 4;
-
         return (
-          <div className="flex flex-wrap gap-1">
-            {displayGroups.map((group, index) => (
-              <span
-                key={group.id || index}
-                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-              >
-                {group.name}
-              </span>
-            ))}
-            {remainingCount > 0 && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                +{remainingCount}
-              </span>
-            )}
-          </div>
+          <span className="text-sm text-gray-900">{groupName || 'No group'}</span>
         );
       }
+    },
+    {
+      key: 'total_marks',
+      title: 'Total Marks',
+      sortable: true,
+      render: (value, row) => {
+        // Calculate from questions if not provided
+        let totalMarks = value || 0;
+        if (!totalMarks && row.questions && Array.isArray(row.questions)) {
+          totalMarks = row.questions.reduce((sum, q) => sum + (q.marks || 0), 0);
+        }
+        return (
+          <span className="text-sm text-gray-900">{totalMarks}</span>
+        );
+      }
+    },
+    {
+      key: 'question_count',
+      title: 'Questions',
+      sortable: true,
+      render: (value, row) => {
+        // Calculate from questions if not provided
+        let questionCount = value || 0;
+        if (!questionCount && row.questions && Array.isArray(row.questions)) {
+          questionCount = row.questions.length;
+        }
+        return (
+          <span className="text-sm text-gray-900">{questionCount}</span>
+        );
+      }
+    },
+    {
+      key: 'usage_count',
+      title: 'Used In',
+      sortable: true,
+      render: (value) => (
+        <span className="text-sm text-gray-500">{value || 0} uploads</span>
+      )
     },
     {
       key: 'created_at',
@@ -438,32 +453,18 @@ export default function SchemesPage() {
           </div>
         </motion.div>
 
-        {/* Card Table */}
+        {/* Data Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <CardTable
+          <DataTable
             data={schemes}
             columns={columns}
             loading={loading}
-            searchable={true}
-            selectable={true}
-            onSelectionChange={setSelectedSchemes}
-            searchPlaceholder="Search marking schemes..."
-            searchFields={['name', 'subject']}
-            bulkActions={[
-              {
-                label: 'Delete Selected',
-                variant: 'danger',
-                icon: Trash2,
-                onClick: (selected) => {
-                  console.log('Delete selected schemes:', selected);
-                }
-              }
-            ]}
-            emptyMessage="No marking schemes found"
+            pagination={pagination}
+            onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
           />
         </motion.div>
       </div>
@@ -560,16 +561,15 @@ export default function SchemesPage() {
               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
             />
           </div>
-          <div className="flex items-center gap-2 opacity-50 cursor-not-allowed">
+          <div className="flex items-center gap-2">
             <input
               id="edit-has-math"
               type="checkbox"
               checked={!!editModal.scheme?.has_math}
               onChange={(e) => setEditModal(prev => ({ ...prev, scheme: { ...prev.scheme, has_math: e.target.checked } }))}
-              disabled
               className="h-4 w-4 text-purple-600 border-gray-300 rounded"
             />
-            <label htmlFor="edit-has-math" className="text-sm text-gray-700">Has Math <span className="text-xs text-gray-500">(Coming Soon)</span></label>
+            <label htmlFor="edit-has-math" className="text-sm text-gray-700">Has Math</label>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Groups</label>

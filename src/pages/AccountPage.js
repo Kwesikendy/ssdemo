@@ -23,16 +23,13 @@ export default function AccountPage(){
   const [showCreditPackages, setShowCreditPackages] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
   const [llmModel, setLlmModel] = useState(() => localStorage.getItem('preferredLLMModel') || '');
-  const [llmOptions, setLlmOptions] = useState([]);
-  const [loadingLLMOptions, setLoadingLLMOptions] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [p, b, prefs] = await Promise.all([
+        const [p, b] = await Promise.all([
           api.get('/account/profile'),
-          api.get('/account/billing'),
-          api.get('/account/preferences')
+          api.get('/account/billing')
         ]);
         setProfile(p.data.data);
         setBilling(b.data.data);
@@ -41,27 +38,10 @@ export default function AccountPage(){
         
         // Set credits from billing data
         setCredits(b.data.data.credits || 0);
-        
-        // Set LLM options from preferences
-        if (prefs.data.success && prefs.data.data.llm_options) {
-          setLlmOptions(prefs.data.data.llm_options);
-        } else {
-          // Fallback to hardcoded options if API fails
-          setLlmOptions([
-            { label: 'Meta - Llama 3.3 70B', value: 'llama-3.3-70b-versatile' },
-            { label: 'OpenAI - GPT-OSS 120B', value: 'openai/gpt-oss-120b' }
-          ]);
-        }
       } catch (e){
         setError(e?.response?.data?.error?.message || 'Failed to load account');
-        // Fallback to hardcoded options on error
-        setLlmOptions([
-          { label: 'Meta - Llama 3.3 70B', value: 'llama-3.3-70b-versatile' },
-          { label: 'OpenAI - GPT-OSS 120B', value: 'openai/gpt-oss-120b' }
-        ]);
       } finally {
         setLoading(false);
-        setLoadingLLMOptions(false);
       }
     };
     load();
@@ -123,7 +103,11 @@ export default function AccountPage(){
     }
   };
 
-  // LLM model options are now loaded dynamically from the backend
+  // LLM model options from Groq, covering major makers
+  const llmOptions = [
+    { label: 'Meta - Llama 3.3 70B', value: 'llama-3.3-70b-versatile' },
+    { label: 'OpenAI - GPT-OSS 120B', value: 'openai/gpt-oss-120b' }
+  ];
 
   const savePreferredModel = async (option) => {
     const value = option?.value || '';
@@ -271,23 +255,15 @@ export default function AccountPage(){
             </button>
           </form>
           <div className="mt-6">
-            <label className="text-sm text-gray-600">Preferred LLM</label>
-            {loadingLLMOptions ? (
-              <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
-                <LoadingSpinner size="small" />
-                Loading LLM options...
-              </div>
-            ) : (
-              <Select
-                className="mt-1"
-                options={llmOptions}
-                value={llmOptions.find(o => o.value === llmModel) || null}
-                onChange={savePreferredModel}
-                placeholder="Select a model"
-                isDisabled={llmOptions.length === 0}
-              />
-            )}
-            <p className="mt-1 text-xs text-gray-500">Used by AI marking. Options are loaded dynamically from the database.</p>
+            <label className="text-sm text-gray-600">Preferred LLM (Groq)</label>
+            <Select
+              className="mt-1"
+              options={llmOptions}
+              value={llmOptions.find(o => o.value === llmModel) || null}
+              onChange={savePreferredModel}
+              placeholder="Select a model"
+            />
+            <p className="mt-1 text-xs text-gray-500">Used by AI marking. Covers one from Meta, Mistral, Qwen, and an OpenAI-compatible family hosted by Groq.</p>
           </div>
         </div>
 

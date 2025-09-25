@@ -31,11 +31,11 @@ export default function CandidateDetailPage() {
       setLoading(true);
       
       // Fetch upload details
-      const uploadResponse = await api.get(`/batch-uploads/${uploadId}`);
+      const uploadResponse = await api.get(`/uploads/${uploadId}`);
       setUpload(uploadResponse.data);
 
       // Fetch candidate details
-      const candidateResponse = await api.get(`/batch-uploads/${uploadId}/candidates/${candidateId}`);
+      const candidateResponse = await api.get(`/uploads/${uploadId}/candidates/${candidateId}`);
       setCandidate(candidateResponse.data);
 
       // Fetch marking scheme
@@ -46,7 +46,7 @@ export default function CandidateDetailPage() {
 
       // Fetch marks
       try {
-        const marksResponse = await api.get(`/batch-uploads/${uploadId}/candidates/${candidateId}/marks`);
+        const marksResponse = await api.get(`/uploads/${uploadId}/candidates/${candidateId}/marks`);
         setMarks(marksResponse.data.marks || {});
       } catch (err) {
         // No marks yet
@@ -65,7 +65,7 @@ export default function CandidateDetailPage() {
   const handleSaveMarks = async () => {
     try {
       setSaving(true);
-      await api.post(`/batch-uploads/${uploadId}/candidates/${candidateId}/marks`, {
+      await api.post(`/uploads/${uploadId}/candidates/${candidateId}/marks`, {
         marks
       });
       setSuccess('Marks updated successfully');
@@ -93,7 +93,7 @@ export default function CandidateDetailPage() {
 
   const handleDownloadScript = async () => {
     try {
-      const response = await api.get(`/batch-uploads/${uploadId}/candidates/${candidateId}/download`, {
+      const response = await api.get(`/uploads/${uploadId}/candidates/${candidateId}/download`, {
         responseType: 'blob'
       });
       

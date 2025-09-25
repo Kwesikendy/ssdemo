@@ -104,11 +104,11 @@ export default function MarkingPage() {
       setLoading(true);
       
       // Fetch upload details
-      const uploadResponse = await api.get(`/batch-uploads/${uploadId}`);
+      const uploadResponse = await api.get(`/uploads/${uploadId}`);
       setUpload(uploadResponse.data);
 
       // Fetch candidate details
-      const candidateResponse = await api.get(`/batch-uploads/${uploadId}/candidates/${candidateId}`);
+      const candidateResponse = await api.get(`/uploads/${uploadId}/candidates/${candidateId}`);
       setCandidate(candidateResponse.data);
 
       // Fetch marking scheme
@@ -117,7 +117,7 @@ export default function MarkingPage() {
 
       // Fetch existing marks if any
       try {
-        const marksResponse = await api.get(`/batch-uploads/${uploadId}/candidates/${candidateId}/marks`);
+        const marksResponse = await api.get(`/uploads/${uploadId}/candidates/${candidateId}/marks`);
         setMarks(marksResponse.data.marks || {});
       } catch (err) {
         // No existing marks, start fresh
@@ -136,7 +136,7 @@ export default function MarkingPage() {
   const handleSaveMarks = async (showMessage = true) => {
     try {
       setSaving(true);
-      await api.post(`/batch-uploads/${uploadId}/candidates/${candidateId}/marks`, {
+      await api.post(`/uploads/${uploadId}/candidates/${candidateId}/marks`, {
         marks,
         auto_save: !showMessage
       });
@@ -196,7 +196,7 @@ export default function MarkingPage() {
       
       addToast('info', 'AI Marking Started', 'Your scripts are being marked automatically in the background');
       
-      const response = await api.post(`/batch-uploads/${uploadId}/candidates/${candidateId}/marking-jobs/start`, {
+      const response = await api.post(`/uploads/${uploadId}/candidates/${candidateId}/marking-jobs/start`, {
         marking_scheme_id: upload?.marking_scheme_id,
         include_custom_instructions: true
       });
@@ -213,7 +213,7 @@ export default function MarkingPage() {
   const handleCompleteMarking = async () => {
     try {
       await handleSaveMarks(false);
-      await api.post(`/batch-uploads/${uploadId}/candidates/${candidateId}/complete`);
+      await api.post(`/uploads/${uploadId}/candidates/${candidateId}/complete`);
       addToast('success', 'Marking completed successfully', 'The candidate has been fully marked');
       navigate(`/uploads/${uploadId}/results`);
     } catch (err) {

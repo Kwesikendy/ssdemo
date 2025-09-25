@@ -217,7 +217,7 @@ export default function SignupPage() {
             <h3 className="text-lg font-semibold mb-2">Get Started Today</h3>
             <ul className="text-sm text-gray-600 space-y-2">
               <li>• 5 free scripts to try our AI marking</li>
-              <li>• Upload images of student scripts</li>
+              <li>• Upload PDFs or images of student scripts</li>
               <li>• Get consistent grading with custom schemes</li>
               <li>• Export results to Excel or PDF</li>
             </ul>

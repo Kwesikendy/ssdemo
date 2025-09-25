@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Filter, RefreshCw, AlertTriangle, Save, CheckCircle } from 'lucide-react';
-import CardTable from '../components/CardTable';
+import { Filter, RefreshCw, AlertTriangle, Save } from 'lucide-react';
+import DataTable from '../components/DataTable';
 import LoadingOverlay from '../components/LoadingOverlay';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatusBadge from '../components/StatusBadge';
@@ -20,8 +20,6 @@ export default function AnomaliesPage() {
   const [error, setError] = useState(null);
   const [severity, setSeverity] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedGroups, setSelectedGroups] = useState([]);
-  const [selectedAnomalies, setSelectedAnomalies] = useState([]);
 
   // Group list
   const [groups, setGroups] = useState([]);
@@ -74,7 +72,7 @@ export default function AnomaliesPage() {
   const loadGroupAnomalies = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/anomalies/exams/${groupId}`, { params: { page: pagination.page, per_page: pagination.per_page, severity, search: searchTerm } });
+      const res = await api.get(`/anomalies/groups/${groupId}`, { params: { page: pagination.page, per_page: pagination.per_page, severity, search: searchTerm } });
       const all = res.data?.anomalies || [];
       // Client-side filter by search across common fields
       const filtered = !searchTerm ? all : all.filter(a => {
@@ -99,7 +97,7 @@ export default function AnomaliesPage() {
 
   const redoOCR = async (pageId) => {
     try {
-      await api.post(`/scripts/${pageId}/ocr/redo`);
+      await api.post(`/pages/${pageId}/ocr/redo`);
       await loadGroupAnomalies();
     } catch (err) {
       setError('Failed to redo OCR');
@@ -109,7 +107,7 @@ export default function AnomaliesPage() {
   const saveOCR = async (pageId) => {
     try {
       await api.patch(`/pages/${pageId}/ocr`, { ocr_text: ocrDraft });
-      await api.post(`/anomalies/scripts/${pageId}/remark`);
+  await api.post(`/anomalies/pages/${pageId}/remark`);
       await loadGroupAnomalies();
       setSelected(null);
     } catch (err) {
@@ -196,51 +194,11 @@ export default function AnomaliesPage() {
         {error && <Alert type="error" message={error} onClose={() => setError(null)} className="mb-4" />}
 
         {!inGroupMode ? (
-          <CardTable 
-            data={groups} 
-            columns={groupColumns} 
-            loading={loading} 
-            searchable={true}
-            selectable={true}
-            onSelectionChange={setSelectedGroups}
-            searchPlaceholder="Search groups..."
-            searchFields={['name', 'description']}
-            bulkActions={[
-              {
-                label: 'Resolve Selected',
-                variant: 'default',
-                icon: CheckCircle,
-                onClick: (selected) => {
-                  console.log('Resolve selected groups:', selected);
-                }
-              }
-            ]}
-            emptyMessage="No groups found" 
-          />
+          <DataTable data={groups} columns={groupColumns} loading={loading} pagination={groupsPagination} onPageChange={(page) => setGroupsPagination(prev => ({ ...prev, page }))} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-3">
-              <CardTable 
-                data={anomalies} 
-                columns={anomalyColumns} 
-                loading={loading} 
-                searchable={true}
-                selectable={true}
-                onSelectionChange={setSelectedAnomalies}
-                searchPlaceholder="Search anomalies..."
-                searchFields={['anomaly_type', 'description']}
-                bulkActions={[
-                  {
-                    label: 'Resolve Selected',
-                    variant: 'default',
-                    icon: CheckCircle,
-                    onClick: (selected) => {
-                      console.log('Resolve selected anomalies:', selected);
-                    }
-                  }
-                ]}
-                emptyMessage="No anomalies found" 
-              />
+              <DataTable data={anomalies} columns={anomalyColumns} loading={loading} pagination={pagination} onPageChange={(page) => setPagination(prev => ({ ...prev, page }))} />
             </div>
             <div className="lg:col-span-2">
               {!selected ? (

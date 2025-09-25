@@ -272,17 +272,16 @@ export default function UploadScheme() {
               <p className="text-xs text-gray-500 mt-1">These instructions will guide the AI when marking papers using this scheme</p>
             </div>
 
-            <div className="flex items-center opacity-50 cursor-not-allowed">
+            <div className="flex items-center">
               <input
                 type="checkbox"
                 id="has_math"
                 name="has_math"
                 checked={formData.has_math}
                 onChange={handleInputChange}
-                disabled
                 className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
               />
-              <label htmlFor="has_math" className="ml-2 block text-sm text-gray-700">This scheme contains mathematical content <span className="text-xs text-gray-500">(Coming Soon)</span></label>
+              <label htmlFor="has_math" className="ml-2 block text-sm text-gray-700">This scheme contains mathematical content</label>
             </div>
 
             {formData.upload_type === 'text' && (

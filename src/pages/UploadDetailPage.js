@@ -26,25 +26,10 @@ export default function UploadDetailPage(){
   async function fetchData(){
     try{
       setLoading(true);
-      const ures = await api.get(`/batch-uploads/${uploadId}`);
+      const ures = await api.get(`/uploads/${uploadId}`);
       const ubody = ures.data;
-      const uploadData = ubody.data || ubody;
-      setUpload(uploadData);
-      
-      // Check if this upload belongs to a group and redirect if so
-      if (uploadData.group_id) {
-        if (uploadData.metadata_jsonb?.is_batch && uploadData.display_name) {
-          // This is a batch upload, redirect to the batch details page
-          navigate(`/uploads/group/${uploadData.group_id}/batch/${encodeURIComponent(uploadData.display_name)}`, { replace: true });
-          return;
-        } else {
-          // This is a simple group upload, redirect to the simple upload details page
-          navigate(`/uploads/group/${uploadData.group_id}/upload/${uploadData.id}`, { replace: true });
-          return;
-        }
-      }
-      
-      const pres = await api.get(`/batch-uploads/${uploadId}/scripts`, { params: { page: 1, per_page: 100 } });
+      setUpload(ubody.data || ubody);
+      const pres = await api.get(`/uploads/${uploadId}/pages`, { params: { page: 1, per_page: 100 } });
       const pbody = pres.data;
       const rows = pbody.data?.pages || pbody.pages || [];
       setPages(rows);
@@ -81,7 +66,7 @@ export default function UploadDetailPage(){
     try{
       setSaving(true);
       toast.info('Saving OCR text...');
-      await api.patch(`/scripts/${selected.id}/ocr`, { ocr_text: ocrText });
+      await api.patch(`/pages/${selected.id}/ocr`, { ocr_text: ocrText });
       toast.success('OCR text saved successfully');
       await fetchData();
     }catch(e){
@@ -97,7 +82,7 @@ export default function UploadDetailPage(){
     try{
       setRedoingOCR(true);
       toast.info('Initiating OCR redo...');
-      await api.post(`/scripts/${selected.id}/ocr/redo`);
+      await api.post(`/pages/${selected.id}/ocr/redo`);
       toast.success('OCR redo initiated successfully. Processing will begin shortly.');
       await fetchData();
     }catch(e){

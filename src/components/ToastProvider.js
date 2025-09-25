@@ -14,9 +14,9 @@ export const useToast = () => {
 const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
-  const addToast = useCallback((message, type = 'info', duration = 5000, action = null) => {
+  const addToast = useCallback((message, type = 'info', duration = 5000) => {
     const id = Date.now() + Math.random();
-    const toast = { id, message, type, duration, action };
+    const toast = { id, message, type, duration };
     
     setToasts(prev => [...prev, toast]);
     
@@ -33,10 +33,10 @@ const ToastProvider = ({ children }) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
 
-  const success = useCallback((message, duration, action) => addToast(message, 'success', duration, action), [addToast]);
-  const error = useCallback((message, duration, action) => addToast(message, 'error', duration, action), [addToast]);
-  const warning = useCallback((message, duration, action) => addToast(message, 'warning', duration, action), [addToast]);
-  const info = useCallback((message, duration, action) => addToast(message, 'info', duration, action), [addToast]);
+  const success = useCallback((message, duration) => addToast(message, 'success', duration), [addToast]);
+  const error = useCallback((message, duration) => addToast(message, 'error', duration), [addToast]);
+  const warning = useCallback((message, duration) => addToast(message, 'warning', duration), [addToast]);
+  const info = useCallback((message, duration) => addToast(message, 'info', duration), [addToast]);
 
   return (
     <ToastContext.Provider value={{ addToast, removeToast, success, error, warning, info }}>
@@ -59,7 +59,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
 };
 
 const Toast = ({ toast, onRemove }) => {
-  const { id, message, type, action } = toast;
+  const { id, message, type } = toast;
 
   const getIcon = () => {
     switch (type) {
@@ -79,15 +79,6 @@ const Toast = ({ toast, onRemove }) => {
     }
   };
 
-  const getActionButtonClasses = () => {
-    switch (type) {
-      case 'success': return 'bg-green-100 text-green-800 hover:bg-green-200';
-      case 'error': return 'bg-red-100 text-red-800 hover:bg-red-200';
-      case 'warning': return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
-      default: return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
-    }
-  };
-
   return (
     <div className={`w-full ${getColorClasses()} border rounded-lg shadow-lg p-3 sm:p-4 animate-in slide-in-from-right duration-300`}>
       <div className="flex items-start">
@@ -98,16 +89,6 @@ const Toast = ({ toast, onRemove }) => {
           <p className="text-sm font-medium text-gray-900 break-words">
             {message}
           </p>
-          {action && (
-            <div className="mt-2">
-              <button
-                onClick={action.onClick}
-                className={`inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded ${getActionButtonClasses()} transition-colors duration-200`}
-              >
-                {action.label}
-              </button>
-            </div>
-          )}
         </div>
         <div className="ml-2 sm:ml-4 flex-shrink-0">
           <button

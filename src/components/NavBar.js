@@ -29,7 +29,7 @@ export default function NavBar(){
     { name: 'Marking', href: '/marking', icon: Cpu },
     { name: 'Results', href: '/results', icon: BarChart3 },
     { name: 'Schemes', href: '/schemes', icon: FileText },
-    { name: 'Groups', href: '/exams', icon: Users },
+    { name: 'Groups', href: '/groups', icon: Users },
   ];
 
   const isActive = (href) => location.pathname === href;
