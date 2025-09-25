@@ -26,7 +26,7 @@ export default function BatchImageDetailsPage() {
       }
       setError(null);
 
-      const response = await api.get(`/pages/${pageId}`);
+      const response = await api.get(`/scripts/${pageId}`);
       const pageData = response.data.data;
 
       setPage(pageData);
@@ -74,7 +74,7 @@ export default function BatchImageDetailsPage() {
       setRedoingOCR(true);
       info('Queuing OCR job...');
       
-      await api.post(`/groups/${groupId}/pages/${page.id}/redo-ocr`);
+      await api.post(`/exams/${groupId}/scripts/${page.id}/redo-ocr`);
       success('OCR job queued successfully. Processing will begin shortly.');
       
       // Refresh the data to show updated status

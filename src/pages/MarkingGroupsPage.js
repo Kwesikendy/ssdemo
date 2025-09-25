@@ -71,7 +71,7 @@ export default function MarkingGroupsPage() {
       setError(null);
       
       // Fetch hierarchical structure instead of flat groups
-      const response = await api.get('/exams/hierarchy');
+      const response = await api.get('/examgroups/hierarchy');
       
       const hierarchyData = response.data.hierarchy || [];
       
@@ -128,7 +128,7 @@ export default function MarkingGroupsPage() {
   // Fetch batches for a specific group
   const fetchBatches = async (groupId) => {
     try {
-      const response = await api.get(`/groups/${groupId}/batches`);
+      const response = await api.get(`/exams/${groupId}/batches`);
       const batchesData = response.data.batches || [];
       
       setBatches(prev => ({
@@ -390,8 +390,8 @@ export default function MarkingGroupsPage() {
           return (
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${getGroupTypeColor(row.group_type)}`}>
-                  {row.group_type === 'batch' ? (
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${getGroupTypeColor(row.exam_type)}`}>
+                  {row.exam_type === 'batch' ? (
                     <Users className="h-5 w-5" />
                   ) : (
                     <FileText className="h-5 w-5" />
@@ -407,8 +407,8 @@ export default function MarkingGroupsPage() {
                   >
                     {row.name}
                   </h3>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getGroupTypeColor(row.group_type)}`}>
-                    {row.group_type}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getGroupTypeColor(row.exam_type)}`}>
+                    {row.exam_type}
                   </span>
                 </div>
                 <p className="text-sm text-gray-500">
@@ -516,7 +516,7 @@ export default function MarkingGroupsPage() {
         // Group row - show group actions
         return (
           <div className="flex items-center space-x-2">
-            {row.group_type === 'batch' ? (
+            {row.exam_type === 'batch' ? (
               <button
                 onClick={() => toggleGroupExpansion(row.id)}
                 className="inline-flex items-center px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
@@ -722,7 +722,7 @@ export default function MarkingGroupsPage() {
               }
             ]}
             onRowClick={(row) => {
-              if (row.is_group && row.group_type === 'batch') {
+              if (row.is_group && row.exam_type === 'batch') {
                 toggleGroupExpansion(row.id);
               } else if (!row.is_group) {
                 navigate(`/marking/exam/${row.id}`);

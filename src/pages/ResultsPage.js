@@ -368,8 +368,8 @@ const ResultsPage = () => {
                         <div>
                           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                             {group.group_name}
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getGroupTypeColor(group.group_type)}`}>
-                              {group.group_type}
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getGroupTypeColor(group.exam_type)}`}>
+                              {group.exam_type}
                             </span>
                           </h3>
                           <p className="text-sm text-gray-600">

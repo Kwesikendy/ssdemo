@@ -41,24 +41,24 @@ export default function App(){
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/uploads" element={<ProtectedRoute><UploadsPage /></ProtectedRoute>} />
-          <Route path="/uploads/exam/:examId" element={<ProtectedRoute><UploadExamGroupsPage /></ProtectedRoute>} />
+          <Route path="/uploads/examgroup/:examGroupId" element={<ProtectedRoute><UploadExamGroupsPage /></ProtectedRoute>} />
           <Route path="/uploads/:uploadId" element={<ProtectedRoute><UploadDetailPage /></ProtectedRoute>} />
-          <Route path="/uploads/group/:groupId" element={<ProtectedRoute><GroupUploadsPage /></ProtectedRoute>} />
-          <Route path="/uploads/group/:groupId/batch/:batchName" element={<ProtectedRoute><BatchDetailsPage /></ProtectedRoute>} />
-          <Route path="/uploads/group/:groupId/batch/:batchName/image/:pageId" element={<ProtectedRoute><BatchImageDetailsPage /></ProtectedRoute>} />
-          <Route path="/uploads/group/:groupId/upload/:uploadId" element={<ProtectedRoute><SimpleUploadDetailsPage /></ProtectedRoute>} />
+          <Route path="/uploads/exam/:examId" element={<ProtectedRoute><GroupUploadsPage /></ProtectedRoute>} />
+          <Route path="/uploads/exam/:examId/batch/:batchName" element={<ProtectedRoute><BatchDetailsPage /></ProtectedRoute>} />
+          <Route path="/uploads/exam/:examId/batch/:batchName/script/:scriptId" element={<ProtectedRoute><BatchImageDetailsPage /></ProtectedRoute>} />
+          <Route path="/uploads/exam/:examId/upload/:uploadId" element={<ProtectedRoute><SimpleUploadDetailsPage /></ProtectedRoute>} />
           <Route path="/anomalies" element={<ProtectedRoute><AnomaliesPage /></ProtectedRoute>} />
-          <Route path="/anomalies/:groupId" element={<ProtectedRoute><AnomaliesPage /></ProtectedRoute>} />
+          <Route path="/anomalies/:examId" element={<ProtectedRoute><AnomaliesPage /></ProtectedRoute>} />
           <Route path="/marking" element={<ProtectedRoute><MarkingGroupsPage /></ProtectedRoute>} />
-          <Route path="/marking/exam/:examId" element={<ProtectedRoute><MarkingExamGroupsPage /></ProtectedRoute>} />
+          <Route path="/marking/examgroup/:examGroupId" element={<ProtectedRoute><MarkingExamGroupsPage /></ProtectedRoute>} />
           <Route path="/results" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />
-          <Route path="/results/group/:groupId" element={<ProtectedRoute><GroupResultsPage /></ProtectedRoute>} />
+          <Route path="/results/exam/:examId" element={<ProtectedRoute><GroupResultsPage /></ProtectedRoute>} />
           <Route path="/results/candidate/:candidateId" element={<ProtectedRoute><CandidateResultsPage /></ProtectedRoute>} />
           <Route path="/results/candidates/:candidateId" element={<ProtectedRoute><CandidateDetailPage /></ProtectedRoute>} />
           <Route path="/schemes" element={<ProtectedRoute><SchemesPage /></ProtectedRoute>} />
           <Route path="/upload-scheme" element={<ProtectedRoute><UploadScheme /></ProtectedRoute>} />
-          <Route path="/groups" element={<ProtectedRoute><GroupsPage /></ProtectedRoute>} />
-          <Route path="/groups/exam/:examId" element={<ProtectedRoute><ExamGroupsPage /></ProtectedRoute>} />
+          <Route path="/exams" element={<ProtectedRoute><GroupsPage /></ProtectedRoute>} />
+          <Route path="/exams/examgroup/:examGroupId" element={<ProtectedRoute><ExamGroupsPage /></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
           </Routes>
         </ToastProvider>

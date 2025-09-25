@@ -239,7 +239,7 @@ const GroupResultsPage = () => {
                   {groupSummary?.group_name || 'Group Results'}
                 </h1>
                 <p className="text-gray-600 mt-1">
-                  {groupSummary?.group_type === 'batch' ? 'Batch Group' : 'Simple Group'} • 
+                  {groupSummary?.exam_type === 'batch' ? 'Batch Group' : 'Simple Group'} • 
                   {candidates.length} candidates
                 </p>
               </div>

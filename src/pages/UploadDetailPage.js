@@ -26,7 +26,7 @@ export default function UploadDetailPage(){
   async function fetchData(){
     try{
       setLoading(true);
-      const ures = await api.get(`/uploads/${uploadId}`);
+      const ures = await api.get(`/batch-uploads/${uploadId}`);
       const ubody = ures.data;
       const uploadData = ubody.data || ubody;
       setUpload(uploadData);
@@ -44,7 +44,7 @@ export default function UploadDetailPage(){
         }
       }
       
-      const pres = await api.get(`/uploads/${uploadId}/pages`, { params: { page: 1, per_page: 100 } });
+      const pres = await api.get(`/batch-uploads/${uploadId}/scripts`, { params: { page: 1, per_page: 100 } });
       const pbody = pres.data;
       const rows = pbody.data?.pages || pbody.pages || [];
       setPages(rows);
@@ -81,7 +81,7 @@ export default function UploadDetailPage(){
     try{
       setSaving(true);
       toast.info('Saving OCR text...');
-      await api.patch(`/pages/${selected.id}/ocr`, { ocr_text: ocrText });
+      await api.patch(`/scripts/${selected.id}/ocr`, { ocr_text: ocrText });
       toast.success('OCR text saved successfully');
       await fetchData();
     }catch(e){
@@ -97,7 +97,7 @@ export default function UploadDetailPage(){
     try{
       setRedoingOCR(true);
       toast.info('Initiating OCR redo...');
-      await api.post(`/pages/${selected.id}/ocr/redo`);
+      await api.post(`/scripts/${selected.id}/ocr/redo`);
       toast.success('OCR redo initiated successfully. Processing will begin shortly.');
       await fetchData();
     }catch(e){

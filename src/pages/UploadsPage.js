@@ -42,7 +42,7 @@ export default function UploadsPage() {
       }
 
       // Fetch hierarchical structure instead of flat groups
-      const response = await api.get('/exams/hierarchy');
+      const response = await api.get('/examgroups/hierarchy');
       const hierarchyData = response.data.hierarchy || [];
       
       // Create a flat list with groups and exams
@@ -104,7 +104,7 @@ export default function UploadsPage() {
 
   const fetchStats = async () => {
     try {
-  const response = await api.get('/uploads/stats');
+  const response = await api.get('/batch-uploads/stats');
   const body = response.data;
   setStats(body.data || body);
     } catch (err) {
@@ -156,7 +156,7 @@ export default function UploadsPage() {
           return (
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${getGroupTypeColor(row.group_type)}`}>
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${getGroupTypeColor(row.exam_type)}`}>
                   <Users className="h-5 w-5" />
                 </div>
               </div>
@@ -169,8 +169,8 @@ export default function UploadsPage() {
                   >
                     {row.name}
                   </h3>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getGroupTypeColor(row.group_type)}`}>
-                    {row.group_type}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getGroupTypeColor(row.exam_type)}`}>
+                    {row.exam_type}
                   </span>
                 </div>
                 <p className="text-sm text-gray-500">

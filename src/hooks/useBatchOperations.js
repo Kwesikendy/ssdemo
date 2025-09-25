@@ -19,7 +19,7 @@ export const useBatchOperations = (groupId) => {
       setDeletingBatch(batchName);
       info('Deleting batch...');
       
-      await api.delete(`/groups/${groupId}/batches/${encodeURIComponent(batchName)}`);
+      await api.delete(`/exams/${groupId}/batches/${encodeURIComponent(batchName)}`);
       success('Batch deleted successfully');
       
       return true; // Success

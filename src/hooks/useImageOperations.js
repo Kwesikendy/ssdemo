@@ -14,7 +14,7 @@ export const useImageOperations = (onRefresh) => {
       setDeletingImage(imageId);
       info('Deleting image...');
       
-      await api.delete(`/pages/${imageId}`);
+      await api.delete(`/scripts/${imageId}`);
       success('Image deleted successfully');
       
       if (onRefresh) {

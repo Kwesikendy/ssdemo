@@ -47,7 +47,7 @@ const BatchDetailsPage = () => {
       }
       setError(null);
 
-        const response = await api.get(`/groups/${groupId}/batches/details?batch_name=${encodeURIComponent(batchName)}`);
+        const response = await api.get(`/exams/${groupId}/batches/details?batch_name=${encodeURIComponent(batchName)}`);
         const data = response.data;
         
       
@@ -101,7 +101,7 @@ const BatchDetailsPage = () => {
 
     setSavingName(true);
     try {
-      await api.put(`/groups/${groupId}/batch-name`, {
+      await api.put(`/exams/${groupId}/batch-name`, {
         old_batch_name: batchInfo?.batchName,
         new_batch_name: newBatchName.trim()
       });
@@ -163,7 +163,7 @@ const BatchDetailsPage = () => {
       setRedoingOCR(pageId);
       info('Queuing OCR job...');
       
-      await api.post(`/groups/pages/${pageId}/redo-ocr`);
+      await api.post(`/exams/${groupId}/scripts/${pageId}/redo-ocr`);
       
       success('OCR job queued successfully. Processing will begin shortly.');
       

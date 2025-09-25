@@ -69,7 +69,7 @@ export default function MarkingExamGroupsPage() {
   // Fetch exam details
   const fetchExamDetails = useCallback(async () => {
     try {
-      const response = await api.get(`/exams/${examId}`);
+      const response = await api.get(`/examgroups/${examId}`);
       setExam(response.data);
     } catch (err) {
       console.error('Failed to fetch exam details:', err);
@@ -83,7 +83,7 @@ export default function MarkingExamGroupsPage() {
       setLoading(true);
       setError(null);
       
-      const response = await api.get(`/exams/${examId}/groups`);
+      const response = await api.get(`/examgroups/${examId}/exams`);
       const groupsData = response.data.groups || [];
       
       setGroups(groupsData);
@@ -106,7 +106,7 @@ export default function MarkingExamGroupsPage() {
   // Fetch batches for a specific group
   const fetchBatches = async (groupId) => {
     try {
-      const response = await api.get(`/groups/${groupId}/batches`);
+      const response = await api.get(`/exams/${groupId}/batches`);
       const batchesData = response.data.batches || [];
       
       setBatches(prev => ({
@@ -345,8 +345,8 @@ export default function MarkingExamGroupsPage() {
       render: (value, row) => (
         <div className="flex items-center space-x-3">
           <div className="flex-shrink-0">
-            <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${getGroupTypeColor(row.group_type)}`}>
-              {row.group_type === 'batch' ? (
+            <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${getGroupTypeColor(row.exam_type)}`}>
+              {row.exam_type === 'batch' ? (
                 <Users className="h-5 w-5" />
               ) : (
                 <FileText className="h-5 w-5" />
@@ -362,8 +362,8 @@ export default function MarkingExamGroupsPage() {
               >
                 {row.name}
               </h3>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getGroupTypeColor(row.group_type)}`}>
-                {row.group_type}
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getGroupTypeColor(row.exam_type)}`}>
+                {row.exam_type}
               </span>
             </div>
             <p className="text-sm text-gray-500">
@@ -408,7 +408,7 @@ export default function MarkingExamGroupsPage() {
       title: 'Actions',
       render: (value, row) => (
         <div className="flex items-center space-x-2">
-          {row.group_type === 'batch' ? (
+          {row.exam_type === 'batch' ? (
             <button
               onClick={() => toggleGroupExpansion(row.id)}
               className="inline-flex items-center px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
@@ -618,7 +618,7 @@ export default function MarkingExamGroupsPage() {
               }
             ]}
             onRowClick={(row) => {
-              if (row.group_type === 'batch') {
+              if (row.exam_type === 'batch') {
                 toggleGroupExpansion(row.id);
               }
             }}

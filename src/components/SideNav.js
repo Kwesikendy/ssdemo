@@ -9,7 +9,7 @@ const items = [
   { name: 'Marking', to: '/marking', icon: Cpu },
   { name: 'Results', to: '/results', icon: BarChart3 },
   { name: 'Schemes', to: '/schemes', icon: FileText },
-  { name: 'Groups', to: '/groups', icon: Users },
+  { name: 'Exams', to: '/exams', icon: Users },
 ];
 
 export default function SideNav() {

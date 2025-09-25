@@ -22,7 +22,7 @@ export default function GroupsPage() {
   const [selectedGroups, setSelectedGroups] = useState({});
   const [selectedExams, setSelectedExams] = useState({});
   const [deleteModal, setDeleteModal] = useState({ open: false, group: null });
-  const [formModal, setFormModal] = useState({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false, group_type: 'simple' });
+  const [formModal, setFormModal] = useState({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false, exam_type: 'simple' });
   const [groupModal, setGroupModal] = useState({ open: false, examName: '' });
   const [editExamModal, setEditExamModal] = useState({ open: false, exam: null, name: '' });
   const [deleteExamModal, setDeleteExamModal] = useState({ open: false, exam: null, moveGroups: true });
@@ -90,7 +90,7 @@ export default function GroupsPage() {
       setErrorState(null);
       
       // Fetch hierarchical structure instead of flat groups
-      const response = await api.get('/exams/hierarchy');
+      const response = await api.get('/examgroups/hierarchy');
       const hierarchyData = response.data.hierarchy || [];
       
       console.log('Fetched hierarchy data:', JSON.stringify(hierarchyData, null, 2));
@@ -110,7 +110,7 @@ export default function GroupsPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get('/groups/stats');
+      const response = await api.get('/exams/stats');
       const body = response.data;
       setStats(body.data || body);
     } catch (err) {
@@ -144,7 +144,7 @@ export default function GroupsPage() {
       const selectedIds = getSelectedGroupIds();
       
       // Create new exam
-      const examResponse = await api.post('/exams', {
+      const examResponse = await api.post('/examgroups', {
         name: groupModal.examName,
         subject: 'Custom Group',
         session: 'Custom Session',
@@ -155,7 +155,7 @@ export default function GroupsPage() {
 
       // Move selected groups to the new exam
       for (const groupId of selectedIds) {
-        await api.put(`/exams/${examId}/groups/${groupId}`);
+        await api.put(`/examgroups/${examId}/exams/${groupId}`);
       }
 
       setGroupModal({ open: false, examName: '' });
@@ -175,16 +175,16 @@ export default function GroupsPage() {
   };
 
   const handleOpenCreate = () => {
-    setFormModal({ open: true, mode: 'create', group: null, name: '', description: '', has_math: false, group_type: 'simple' });
+    setFormModal({ open: true, mode: 'create', group: null, name: '', description: '', has_math: false, exam_type: 'simple' });
   };
 
   const handleOpenEdit = (group) => {
-    setFormModal({ open: true, mode: 'edit', group, name: group.name, description: group.description || '', has_math: !!group.has_math, group_type: group.group_type || 'simple' });
+    setFormModal({ open: true, mode: 'edit', group, name: group.name, description: group.description || '', has_math: !!group.has_math, exam_type: group.exam_type || 'simple' });
   };
 
   const handleDeleteGroup = async (group) => {
     try {
-      await api.delete(`/groups/${group.id}`);
+      await api.delete(`/exams/${group.id}`);
       setDeleteModal({ open: false, group: null });
       fetchGroups();
       setErrorState(null);
@@ -201,17 +201,17 @@ export default function GroupsPage() {
   const handleSubmitGroup = async (e) => {
     e.preventDefault();
     try {
-  const payload = { name: formModal.name.trim(), description: formModal.description.trim(), has_math: !!formModal.has_math, group_type: formModal.group_type };
+  const payload = { name: formModal.name.trim(), description: formModal.description.trim(), has_math: !!formModal.has_math, exam_type: formModal.exam_type };
       if (!payload.name) {
         setErrorState('Group name is required.');
         return;
       }
       if (formModal.mode === 'create') {
-        await api.post('/groups', payload);
+        await api.post('/exams', payload);
       } else if (formModal.mode === 'edit' && formModal.group) {
-        await api.put(`/groups/${formModal.group.id}`, payload);
+        await api.put(`/exams/${formModal.group.id}`, payload);
       }
-  setFormModal({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false, group_type: 'simple' });
+  setFormModal({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false, exam_type: 'simple' });
       await fetchGroups();
       await fetchStats();
       setErrorState(null);
@@ -247,8 +247,8 @@ export default function GroupsPage() {
     try {
       const { exam, moveGroups } = deleteExamModal;
       const url = moveGroups 
-        ? `/exams/${exam.id}?move_groups=true`
-        : `/exams/${exam.id}?move_groups=false`;
+        ? `/examgroups/${exam.id}?move_groups=true`
+        : `/examgroups/${exam.id}?move_groups=false`;
       
       await api.delete(url);
       
@@ -273,7 +273,7 @@ export default function GroupsPage() {
         return;
       }
       
-      await api.put(`/exams/${editExamModal.exam.id}`, {
+      await api.put(`/examgroups/${editExamModal.exam.id}`, {
         name: editExamModal.name.trim()
       });
       
@@ -318,14 +318,14 @@ export default function GroupsPage() {
 
       // Delete groups
       for (const group of groups) {
-        await api.delete(`/groups/${group.id}`);
+        await api.delete(`/exams/${group.id}`);
       }
 
       // Delete exams
       for (const exam of exams) {
         const url = moveGroups 
-          ? `/exams/${exam.id}?move_groups=true`
-          : `/exams/${exam.id}?move_groups=false`;
+          ? `/examgroups/${exam.id}?move_groups=true`
+          : `/examgroups/${exam.id}?move_groups=false`;
         await api.delete(url);
       }
 
@@ -598,11 +598,11 @@ export default function GroupsPage() {
                         className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                       />
                       <div className={`h-8 w-8 rounded flex items-center justify-center ${
-                        item.group_type === 'batch' 
+                        item.exam_type === 'batch' 
                           ? 'bg-purple-100 text-purple-600' 
                           : 'bg-blue-100 text-blue-600'
                       }`}>
-                        {item.group_type === 'batch' ? (
+                        {item.exam_type === 'batch' ? (
                           <Users className="h-4 w-4" />
                         ) : (
                           <FileText className="h-4 w-4" />
@@ -611,15 +611,15 @@ export default function GroupsPage() {
                       <div>
                         <h4 className="text-sm font-medium text-gray-900">{item.name}</h4>
                         <p className="text-xs text-gray-500">
-                          {item.group_type} • {item.upload_count || 0} uploads
+                          {item.exam_type} • {item.upload_count || 0} uploads
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        item.group_type === 'simple' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                        item.exam_type === 'simple' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
                       }`}>
-                        {item.group_type === 'simple' ? 'Individual' : 'Batch'}
+                        {item.exam_type === 'simple' ? 'Individual' : 'Batch'}
                       </span>
                       <button
                         onClick={() => navigate(`/uploads/group/${item.id}`)}
@@ -828,7 +828,7 @@ export default function GroupsPage() {
       {/* Group Form Modal */}
       <Modal
         isOpen={formModal.open}
-  onClose={() => setFormModal({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false, group_type: 'simple' })}
+  onClose={() => setFormModal({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false, exam_type: 'simple' })}
         title={formModal.mode === 'create' ? 'New Group' : 'Edit Group'}
       >
         <form onSubmit={handleSubmitGroup} className="p-6 space-y-4">
@@ -846,8 +846,8 @@ export default function GroupsPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Group Type</label>
             <select
-              value={formModal.group_type}
-              onChange={(e) => setFormModal(prev => ({ ...prev, group_type: e.target.value }))}
+              value={formModal.exam_type}
+              onChange={(e) => setFormModal(prev => ({ ...prev, exam_type: e.target.value }))}
               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               required
             >
@@ -855,7 +855,7 @@ export default function GroupsPage() {
               <option value="batch">Batch Uploads - Group multiple uploads together with custom naming</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              {formModal.group_type === 'simple' 
+              {formModal.exam_type === 'simple' 
                 ? 'Perfect for individual exam scripts where each image should be visible separately' 
                 : 'Ideal for organizing multiple batches of uploads with custom names like "1st batch", "2nd batch"'
               }
@@ -888,7 +888,7 @@ export default function GroupsPage() {
             <button type="submit" className="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm">
               {formModal.mode === 'create' ? 'Create' : 'Save changes'}
             </button>
-            <button type="button" onClick={() => setFormModal({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false, group_type: 'simple' })} className="mt-3 w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:text-sm">
+            <button type="button" onClick={() => setFormModal({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false, exam_type: 'simple' })} className="mt-3 w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:text-sm">
               Cancel
             </button>
           </div>

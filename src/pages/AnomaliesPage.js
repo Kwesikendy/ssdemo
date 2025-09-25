@@ -74,7 +74,7 @@ export default function AnomaliesPage() {
   const loadGroupAnomalies = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/anomalies/groups/${groupId}`, { params: { page: pagination.page, per_page: pagination.per_page, severity, search: searchTerm } });
+      const res = await api.get(`/anomalies/exams/${groupId}`, { params: { page: pagination.page, per_page: pagination.per_page, severity, search: searchTerm } });
       const all = res.data?.anomalies || [];
       // Client-side filter by search across common fields
       const filtered = !searchTerm ? all : all.filter(a => {
@@ -99,7 +99,7 @@ export default function AnomaliesPage() {
 
   const redoOCR = async (pageId) => {
     try {
-      await api.post(`/pages/${pageId}/ocr/redo`);
+      await api.post(`/scripts/${pageId}/ocr/redo`);
       await loadGroupAnomalies();
     } catch (err) {
       setError('Failed to redo OCR');
@@ -109,7 +109,7 @@ export default function AnomaliesPage() {
   const saveOCR = async (pageId) => {
     try {
       await api.patch(`/pages/${pageId}/ocr`, { ocr_text: ocrDraft });
-  await api.post(`/anomalies/pages/${pageId}/remark`);
+      await api.post(`/anomalies/scripts/${pageId}/remark`);
       await loadGroupAnomalies();
       setSelected(null);
     } catch (err) {

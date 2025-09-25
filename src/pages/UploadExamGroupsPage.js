@@ -30,7 +30,7 @@ export default function UploadExamGroupsPage() {
 
   const fetchExamDetails = useCallback(async () => {
     try {
-      const response = await api.get(`/exams/${examId}`);
+      const response = await api.get(`/examgroups/${examId}`);
       setExam(response.data);
     } catch (err) {
       console.error('Failed to fetch exam details:', err);
@@ -40,7 +40,7 @@ export default function UploadExamGroupsPage() {
 
   const fetchGroups = useCallback(async () => {
     try {
-      const response = await api.get(`/exams/${examId}/groups`);
+      const response = await api.get(`/examgroups/${examId}/exams`);
       setGroups(response.data.groups || []);
       setError(null);
     } catch (err) {
@@ -106,7 +106,7 @@ export default function UploadExamGroupsPage() {
       render: (value, row) => (
         <div className="flex items-center space-x-3">
           <div className="flex-shrink-0">
-            <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${getGroupTypeColor(row.group_type)}`}>
+            <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${getGroupTypeColor(row.exam_type)}`}>
               <Users className="h-5 w-5" />
             </div>
           </div>
@@ -119,8 +119,8 @@ export default function UploadExamGroupsPage() {
               >
                 {value}
               </h3>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getGroupTypeColor(row.group_type)}`}>
-                {row.group_type}
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getGroupTypeColor(row.exam_type)}`}>
+                {row.exam_type}
               </span>
             </div>
             <p className="text-sm text-gray-500">

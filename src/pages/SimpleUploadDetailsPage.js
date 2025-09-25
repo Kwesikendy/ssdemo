@@ -34,12 +34,12 @@ const SimpleUploadDetailsPage = () => {
       setError(null);
 
       // Fetch upload details
-      const uploadRes = await api.get(`/uploads/${uploadId}`);
+      const uploadRes = await api.get(`/batch-uploads/${uploadId}`);
       const uploadData = uploadRes.data.data || uploadRes.data;
       setUpload(uploadData);
 
       // Fetch pages for this upload
-      const pagesRes = await api.get(`/uploads/${uploadId}/pages`, { 
+      const pagesRes = await api.get(`/batch-uploads/${uploadId}/scripts`, { 
         params: { page: 1, per_page: 100 } 
       });
       const pagesData = pagesRes.data.data?.pages || pagesRes.data.pages || [];
@@ -93,7 +93,7 @@ const SimpleUploadDetailsPage = () => {
       setRedoingOCR(pageId);
       info('Queuing OCR job...');
       
-      await api.post(`/groups/pages/${pageId}/redo-ocr`);
+      await api.post(`/exams/${groupId}/scripts/${pageId}/redo-ocr`);
       success('OCR job queued successfully. Processing will begin shortly.');
       
       // Refresh the data to show updated status

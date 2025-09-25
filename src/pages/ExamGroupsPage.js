@@ -25,7 +25,7 @@ const ExamGroupsPage = () => {
     name: '', 
     description: '', 
     has_math: false, 
-    group_type: 'simple' 
+    exam_type: 'simple' 
   });
 
   const examName = location.state?.examName || 'Exam';
@@ -44,7 +44,7 @@ const ExamGroupsPage = () => {
       setLoading(true);
       // setErrorState(null);
       
-      const response = await api.get(`/exams/${examId}/groups`);
+      const response = await api.get(`/examgroups/${examId}/exams`);
       setGroups(response.data.groups || []);
       
     } catch (err) {
@@ -68,7 +68,7 @@ const ExamGroupsPage = () => {
       name: '', 
       description: '', 
       has_math: false, 
-      group_type: 'simple' 
+      exam_type: 'simple' 
     });
   };
 
@@ -80,19 +80,19 @@ const ExamGroupsPage = () => {
         name: formModal.name,
         description: formModal.description,
         has_math: formModal.has_math,
-        group_type: formModal.group_type
+        exam_type: formModal.exam_type
       };
 
       if (formModal.mode === 'create') {
         // Create group in the current exam
-        const response = await api.post('/groups', groupData);
+        const response = await api.post('/exams', groupData);
         const newGroupId = response.data.id;
         
         // Move the group to the current exam
-        await api.put(`/exams/${examId}/groups/${newGroupId}`);
+        await api.put(`/examgroups/${examId}/exams/${newGroupId}`);
         success('Group created successfully');
       } else {
-        await api.put(`/groups/${formModal.group.id}`, groupData);
+        await api.put(`/exams/${formModal.group.id}`, groupData);
         success('Group updated successfully');
       }
 
@@ -103,7 +103,7 @@ const ExamGroupsPage = () => {
         name: '', 
         description: '', 
         has_math: false, 
-        group_type: 'simple' 
+        exam_type: 'simple' 
       });
       
       await fetchGroups();
@@ -116,7 +116,7 @@ const ExamGroupsPage = () => {
 
   const handleDeleteGroup = async (group) => {
     try {
-      await api.delete(`/groups/${group.id}`);
+      await api.delete(`/exams/${group.id}`);
       success('Group deleted successfully');
       await fetchGroups();
     } catch (err) {
@@ -182,11 +182,11 @@ const ExamGroupsPage = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                        group.group_type === 'batch' 
+                        group.exam_type === 'batch' 
                           ? 'bg-purple-100 text-purple-600' 
                           : 'bg-blue-100 text-blue-600'
                       }`}>
-                        {group.group_type === 'batch' ? (
+                        {group.exam_type === 'batch' ? (
                           <Users className="h-5 w-5" />
                         ) : (
                           <FileText className="h-5 w-5" />
@@ -201,9 +201,9 @@ const ExamGroupsPage = () => {
                         </p>
                         <div className="mt-1 flex items-center space-x-4 text-xs text-gray-500">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            group.group_type === 'simple' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                            group.exam_type === 'simple' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
                           }`}>
-                            {group.group_type === 'simple' ? 'Individual Scripts' : 'Batch Uploads'}
+                            {group.exam_type === 'simple' ? 'Individual Scripts' : 'Batch Uploads'}
                           </span>
                           {group.has_math && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -229,7 +229,7 @@ const ExamGroupsPage = () => {
                           name: group.name, 
                           description: group.description || '', 
                           has_math: group.has_math, 
-                          group_type: group.group_type 
+                          exam_type: group.exam_type 
                         })}
                         className="text-gray-400 hover:text-gray-600"
                       >
@@ -273,7 +273,7 @@ const ExamGroupsPage = () => {
           name: '', 
           description: '', 
           has_math: false, 
-          group_type: 'simple' 
+          exam_type: 'simple' 
         })}
         title={formModal.mode === 'create' ? 'New Group' : 'Edit Group'}
       >
@@ -302,8 +302,8 @@ const ExamGroupsPage = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Group Type</label>
             <select
-              value={formModal.group_type}
-              onChange={(e) => setFormModal(prev => ({ ...prev, group_type: e.target.value }))}
+              value={formModal.exam_type}
+              onChange={(e) => setFormModal(prev => ({ ...prev, exam_type: e.target.value }))}
               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             >
               <option value="simple">Individual Scripts</option>
@@ -333,7 +333,7 @@ const ExamGroupsPage = () => {
                 name: '', 
                 description: '', 
                 has_math: false, 
-                group_type: 'simple' 
+                exam_type: 'simple' 
               })}
               className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
             >

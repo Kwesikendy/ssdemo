@@ -18,7 +18,7 @@ export default function GroupUploadsPage() {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const [group, setGroup] = useState(null);
+  const [exam, setExam] = useState(null);
   const [uploads, setUploads] = useState([]);
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,13 +39,13 @@ export default function GroupUploadsPage() {
   const { deletingBatch, handleViewBatch, handleDeleteBatch, handleGoToMarkBatch } = useBatchOperations(groupId);
 
 
-  const fetchGroup = useCallback(async () => {
+  const fetchExam = useCallback(async () => {
     try {
-      const res = await api.get(`/groups/${groupId}`);
+      const res = await api.get(`/exams/${groupId}`);
       const body = res.data;
-      const groupData = body.data || body;
-      console.log('Fetched group:', groupData);
-      setGroup(groupData);
+      const examData = body.data || body;
+      console.log('Fetched exam:', examData);
+      setExam(examData);
     } catch (e) {
       console.error('Failed to fetch group', e);
       toast.error('Failed to load group information');
@@ -60,12 +60,12 @@ export default function GroupUploadsPage() {
         setRefreshing(true);
       }
       
-      console.log('fetchUploads called with group:', group);
+      console.log('fetchUploads called with exam:', exam);
       
-      // For simple groups, use the new group pages endpoint to get individual images
-      if (group && group.group_type === 'simple') {
+      // For simple exams, use the new exam scripts endpoint to get individual images
+      if (exam && exam.exam_type === 'simple') {
         const params = { page: pagination.page, per_page: pagination.per_page };
-        const res = await api.get(`/groups/${groupId}/pages`, { params });
+        const res = await api.get(`/exams/${groupId}/scripts`, { params });
         const body = res.data;
         let uploads = body.data?.uploads || body.uploads || [];
         
@@ -111,11 +111,11 @@ export default function GroupUploadsPage() {
         }));
         setUploads(pageItems);
         setBatches([]);
-      } else if (group && group.group_type === 'batch') {
-        // For batch groups, get batches
-        console.log('Fetching batches for group:', groupId, 'group type:', group.group_type);
+      } else if (exam && exam.exam_type === 'batch') {
+        // For batch exams, get batches
+        console.log('Fetching batches for exam:', groupId, 'exam type:', exam.exam_type);
         try {
-          const res = await api.get(`/groups/${groupId}/batches`);
+          const res = await api.get(`/exams/${groupId}/batches`);
           const body = res.data;
           console.log('Batches response:', body);
           let batchItems = body.batches || [];
@@ -132,16 +132,16 @@ export default function GroupUploadsPage() {
         } catch (error) {
           console.error('Error fetching batches:', error);
           if (error.response?.status === 400) {
-            console.error('400 Bad Request - Group might not exist or have wrong type');
-            toast.error('Failed to fetch batches. Group might not be configured for batch processing.');
+            console.error('400 Bad Request - Exam might not exist or have wrong type');
+            toast.error('Failed to fetch batches. Exam might not be configured for batch processing.');
           } else {
             throw error; // Re-throw to be caught by outer catch
           }
         }
       } else {
-        // For multi groups, use the regular uploads endpoint
+        // For multi exams, use the regular batch-uploads endpoint
         const params = { page: pagination.page, per_page: pagination.per_page, group_id: groupId };
-        const res = await api.get('/uploads', { params });
+        const res = await api.get('/batch-uploads', { params });
         const body = res.data;
         let rows = body.data?.uploads || body.uploads || [];
         if (searchTerm) {
@@ -179,18 +179,18 @@ export default function GroupUploadsPage() {
         setRefreshing(false);
       }
     }
-  }, [group, groupId, searchTerm, pagination.page, pagination.per_page, toast]);
+  }, [exam, groupId, searchTerm, pagination.page, pagination.per_page, toast]);
 
   useEffect(() => {
-    fetchGroup();
+    fetchExam();
   }, [groupId]);
 
   useEffect(() => {
-    // Only fetch uploads after group is loaded to know the group type
-    if (group) {
-      fetchUploads();
-    }
-  }, [groupId, pagination.page, pagination.per_page, group]);
+    // Only fetch uploads after exam is loaded to know the exam type
+      if (exam) {
+        fetchUploads();
+      }
+  }, [groupId, pagination.page, pagination.per_page, exam]);
 
   useEffect(() => {
     // Poll while there are uploads processing
@@ -208,7 +208,7 @@ export default function GroupUploadsPage() {
     if (!window.confirm('Delete this upload? This will remove all pages.')) return;
     try {
       toast.info('Deleting upload...');
-      await api.delete(`/uploads/${uploadId}`);
+      await api.delete(`/batch-uploads/${uploadId}`);
       toast.success('Upload deleted successfully');
       fetchUploads();
     } catch (e) {
@@ -255,12 +255,12 @@ export default function GroupUploadsPage() {
       }, 200);
       
       // Build URL with parameters
-      let url = `/groups/${groupId}/uploads?mode=${encodeURIComponent(mode)}`;
-      if (group && group.group_type === 'batch' && batchName.trim()) {
+      let url = `/exams/${groupId}/uploads?mode=${encodeURIComponent(mode)}`;
+      if (exam && exam.exam_type === 'batch' && batchName.trim()) {
         url += `&batch_name=${encodeURIComponent(batchName.trim())}`;
       }
       
-      // Use group endpoint; backend will tie to the group's exam automatically
+      // Use exam endpoint; backend will tie to the exam automatically
       const res = await api.post(url, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -273,12 +273,12 @@ export default function GroupUploadsPage() {
       handleCloseUpload();
       fetchUploads();
       
-      // Handle redirect based on group type
-      if (group && group.group_type === 'batch' && batchName.trim()) {
-        // For batch groups, redirect to the batch details page
+      // Handle redirect based on exam type
+      if (exam && exam.exam_type === 'batch' && batchName.trim()) {
+        // For batch exams, redirect to the batch details page
         navigate(`/uploads/group/${groupId}/batch/${encodeURIComponent(batchName.trim())}`);
-      } else if (group && group.group_type === 'simple' && created && Array.isArray(created) && created.length > 0) {
-        // For simple groups, redirect to the simple upload details page
+      } else if (exam && exam.exam_type === 'simple' && created && Array.isArray(created) && created.length > 0) {
+        // For simple exams, redirect to the simple upload details page
         navigate(`/uploads/group/${groupId}/upload/${created[0]}`);
       }
     } catch (e) {
@@ -380,7 +380,7 @@ export default function GroupUploadsPage() {
   const columns = [
     {
       key: 'original_filename',
-      title: group && group.group_type === 'simple' ? 'Image' : 'File',
+      title: exam && exam.exam_type === 'simple' ? 'Image' : 'File',
       render: (value, row) => (
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10">
@@ -473,10 +473,10 @@ export default function GroupUploadsPage() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {group ? group.name : 'Group'} {group && group.group_type === 'simple' ? 'Images' : 'Uploads'}
+              {exam ? exam.name : 'Group'} {exam && exam.exam_type === 'simple' ? 'Images' : 'Uploads'}
             </h1>
             <p className="text-gray-600">
-              {group && group.group_type === 'simple' 
+              {exam && exam.exam_type === 'simple' 
                 ? 'View and manage individual images for this group' 
                 : 'View and manage uploads for this group'
               }
@@ -508,27 +508,27 @@ export default function GroupUploadsPage() {
           <div className="mb-4 flex flex-wrap gap-3 items-end">
             <div className="flex-1 min-w-[220px]">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Search {group && group.group_type === 'simple' ? 'images' : 'uploads'}
+                Search {exam && exam.exam_type === 'simple' ? 'images' : 'uploads'}
               </label>
               <input 
                 value={searchTerm} 
                 onChange={(e)=>{ setSearchTerm(e.target.value); setPagination(p=>({ ...p, page: 1 })); }} 
-                placeholder={`Search by ${group && group.group_type === 'simple' ? 'image' : 'file'}, mode, or status...`} 
+                placeholder={`Search by ${exam && exam.exam_type === 'simple' ? 'image' : 'file'}, mode, or status...`} 
                 className="w-full border rounded-md px-3 py-2 text-sm" 
               />
             </div>
           </div>
           <CardTable
-            data={group && group.group_type === 'batch' ? batches : uploads}
-            columns={group && group.group_type === 'batch' ? batchColumns : columns}
+            data={exam && exam.exam_type === 'batch' ? batches : uploads}
+            columns={exam && exam.exam_type === 'batch' ? batchColumns : columns}
             loading={loading}
             searchable={true}
             selectable={true}
             onSelectionChange={setSelectedItems}
             searchPlaceholder={
-              group && group.group_type === 'batch' 
+              exam && exam.exam_type === 'batch' 
                 ? 'Search batches...' 
-                : group && group.group_type === 'simple' 
+                : exam && exam.exam_type === 'simple' 
                   ? 'Search images...' 
                   : 'Search uploads...'
             }
@@ -544,16 +544,16 @@ export default function GroupUploadsPage() {
               }
             ]}
             emptyMessage={
-              group && group.group_type === 'batch' 
-                ? 'No batches found in this group' 
-                : group && group.group_type === 'simple' 
-                  ? 'No images found in this group' 
-                  : 'No uploads found in this group'
+              exam && exam.exam_type === 'batch' 
+                ? 'No batches found in this exam' 
+                : exam && exam.exam_type === 'simple' 
+                  ? 'No images found in this exam' 
+                  : 'No uploads found in this exam'
             }
           />
         </div>
 
-  <Modal isOpen={isUploadOpen} onClose={handleCloseUpload} title="Upload scripts to this group" size="md">
+  <Modal isOpen={isUploadOpen} onClose={handleCloseUpload} title="Upload scripts to this exam" size="md">
           <form onSubmit={handleSubmitUpload} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Mode</label>
@@ -568,7 +568,7 @@ export default function GroupUploadsPage() {
                 </label>
               </div>
             </div>
-            {group && group.group_type === 'batch' && (
+            {exam && exam.exam_type === 'batch' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Batch Name (Optional)</label>
                 <input
