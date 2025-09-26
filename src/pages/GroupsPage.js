@@ -92,7 +92,7 @@ export default function GroupsPage() {
   };
 
   const handleViewGroup = (group) => {
-    navigate(`/groups/${group.id}`);
+    navigate(`/uploads/group/${group.id}`);
   };
 
   const handleSubmitGroup = async (e) => {
@@ -188,7 +188,7 @@ export default function GroupsPage() {
           <button
             onClick={() => handleViewGroup(row)}
             className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-indigo-50"
-            title="View Group"
+            title="View Group Uploads"
           >
             <FileText className="h-4 w-4" />
           </button>

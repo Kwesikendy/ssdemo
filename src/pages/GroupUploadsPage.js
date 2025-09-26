@@ -23,7 +23,8 @@ export default function GroupUploadsPage() {
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({ page: 1, per_page: 10, total: 0, total_pages: 0 });
   const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [mode, setMode] = useState('images');
+  // Mode is always 'images' - PDF support removed
+  const mode = 'images';
   const [files, setFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -192,7 +193,12 @@ export default function GroupUploadsPage() {
             </div>
           </div>
           <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">{value || row.filename || 'Upload'}</div>
+            <button
+              onClick={() => navigate(`/uploads/${row.id}`)}
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-900 hover:underline text-left"
+            >
+              {value || row.filename || 'Upload'}
+            </button>
             <div className="text-xs text-gray-500">Mode: {row.mode}</div>
           </div>
         </div>
@@ -288,27 +294,15 @@ export default function GroupUploadsPage() {
           />
         </div>
 
-  <Modal isOpen={isUploadOpen} onClose={handleCloseUpload} title="Upload scripts to this group" size="md">
+  <Modal isOpen={isUploadOpen} onClose={handleCloseUpload} title="Upload images to this group" size="md">
           <form onSubmit={handleSubmitUpload} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mode</label>
-              <div className="flex items-center space-x-4">
-                <label className="inline-flex items-center">
-                  <input type="radio" name="mode" value="images" checked={mode === 'images'} onChange={() => setMode('images')} className="text-indigo-600 border-gray-300" />
-                  <span className="ml-2">Images</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input type="radio" name="mode" value="pdfs" checked={mode === 'pdfs'} onChange={() => setMode('pdfs')} className="text-indigo-600 border-gray-300" />
-                  <span className="ml-2">PDFs</span>
-                </label>
-              </div>
-            </div>
+            {/* Mode is always 'images' - PDF support removed */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Files</label>
               <input
                 type="file"
                 multiple
-                accept={mode === 'images' ? 'image/*' : 'application/pdf'}
+                accept="image/*"
                 onChange={(e) => setFiles(Array.from(e.target.files || []))}
                 className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
               />
