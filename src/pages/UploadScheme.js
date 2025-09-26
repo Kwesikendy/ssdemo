@@ -263,7 +263,13 @@ export default function UploadScheme() {
               <textarea
                 id="custom_instructions"
                 name="custom_instructions"
-                value={formData.custom_instructions}
+                value={formData.custom_instructions || `Marking Guidelines:
+- Award full marks for complete and correct answers
+- Award partial marks for partially correct answers
+- Award 0 marks for incorrect or blank answers
+- Be consistent in your marking across all scripts
+- Provide constructive feedback for each question
+- Consider clarity and presentation in your marking`}
                 onChange={handleInputChange}
                 rows={3}
                 placeholder="Enter any additional instructions for the AI when marking papers (optional)..."
