@@ -17,7 +17,7 @@ export default function GroupUploadsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const [group, setGroup] = useState(null);
-  const [uploads, setUploads] = useState([]);
+  const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -36,20 +36,20 @@ export default function GroupUploadsPage() {
   }, [groupId]);
 
   useEffect(() => {
-    fetchUploads();
+    fetchCandidates();
   }, [groupId, pagination.page, pagination.per_page]);
 
   useEffect(() => {
-    // Poll while there are uploads processing
-    const hasProcessing = uploads.some(u => ['pending','processing','queued'].includes((u.status||'').toLowerCase()));
+    // Poll while there are candidates being processed
+    const hasProcessing = candidates.some(c => c.page_count === 0 || c.bound_pages < c.page_count);
     if (hasProcessing){
       pollRef.current && clearInterval(pollRef.current);
-      pollRef.current = setInterval(()=>{ fetchUploads(false); }, 4000);
+      pollRef.current = setInterval(()=>{ fetchCandidates(false); }, 4000);
     } else if (pollRef.current){
       clearInterval(pollRef.current);
     }
     return () => { if(pollRef.current) clearInterval(pollRef.current); };
-  }, [uploads]);
+  }, [candidates]);
 
   const fetchGroup = async () => {
     try {
@@ -62,39 +62,37 @@ export default function GroupUploadsPage() {
     }
   };
 
-  const fetchUploads = async (showLoader = true) => {
+  const fetchCandidates = async (showLoader = true) => {
     try {
       if(showLoader) {
         setLoading(true);
       } else {
         setRefreshing(true);
       }
-      const params = { page: pagination.page, per_page: pagination.per_page, group_id: groupId };
-      const res = await api.get('/uploads', { params });
+      const params = { page: pagination.page, per_page: pagination.per_page };
+      const res = await api.get(`/groups/${groupId}/candidates`, { params });
       const body = res.data;
-      let rows = body.data?.uploads || body.uploads || [];
+      let rows = body.data?.candidates || body.candidates || [];
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
-        rows = rows.filter(u => (
-          (u.original_filename || u.filename || '').toLowerCase().includes(q) ||
-          (u.mode || '').toLowerCase().includes(q) ||
-          (u.upload_status || u.status || '').toLowerCase().includes(q) ||
-          (u.ocr_status || '').toLowerCase().includes(q)
+        rows = rows.filter(c => (
+          (c.index_number || '').toLowerCase().includes(q) ||
+          (c.page_count || 0).toString().includes(q)
         ));
       }
       const meta = body.data?.pagination || body.pagination || null;
       if (meta) {
         const total = rows.length;
         const start = (pagination.page - 1) * pagination.per_page;
-        setUploads(rows.slice(start, start + pagination.per_page));
+        setCandidates(rows.slice(start, start + pagination.per_page));
         setPagination(prev => ({ ...prev, total, total_pages: Math.ceil(total / prev.per_page) }));
       } else {
-        setUploads(rows);
+        setCandidates(rows);
       }
       setError(null);
     } catch (e) {
-      console.error('Failed to fetch uploads', e);
-      const errorMsg = 'Failed to fetch uploads for this group.';
+      console.error('Failed to fetch candidates', e);
+      const errorMsg = 'Failed to fetch candidates for this group.';
       setError(errorMsg);
       if (!showLoader) {
         toast.error(errorMsg);
@@ -114,7 +112,7 @@ export default function GroupUploadsPage() {
       toast.info('Deleting upload...');
       await api.delete(`/uploads/${uploadId}`);
       toast.success('Upload deleted successfully');
-      fetchUploads();
+      fetchCandidates();
     } catch (e) {
       console.error('Delete failed', e);
       const errorMsg = 'Failed to delete upload.';
@@ -166,7 +164,7 @@ export default function GroupUploadsPage() {
       
       toast.success(`Successfully uploaded ${files.length} file(s)! Processing will begin automatically.`);
       handleCloseUpload();
-      fetchUploads();
+      fetchCandidates();
     } catch (e) {
       console.error('Upload failed', e);
       const errorMsg = 'Upload failed. Please try again.';
@@ -183,23 +181,37 @@ export default function GroupUploadsPage() {
 
   const columns = [
     {
-      key: 'original_filename',
-      title: 'File',
+      key: 'index_number',
+      title: 'Candidate',
       render: (value, row) => (
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10">
-            <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-              <Upload className="h-5 w-5 text-indigo-600" />
+            <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+              <span className="text-sm font-semibold text-green-600">
+                {value ? value.charAt(0).toUpperCase() : 'C'}
+              </span>
             </div>
           </div>
           <div className="ml-4">
             <button
-              onClick={() => navigate(`/uploads/${row.id}`)}
+              onClick={() => navigate(`/candidates/${row.id}/pages`)}
               className="text-sm font-medium text-indigo-600 hover:text-indigo-900 hover:underline text-left"
             >
-              {value || row.filename || 'Upload'}
+              {value || 'Unknown Candidate'}
             </button>
-            <div className="text-xs text-gray-500">Mode: {row.mode}</div>
+            <div className="text-xs text-gray-500">ID: {row.id.slice(0, 8)}...</div>
+          </div>
+        </div>
+      )
+    },
+    { 
+      key: 'page_count', 
+      title: 'Pages', 
+      render: (value, row) => (
+        <div className="text-center">
+          <div className="text-lg font-semibold text-gray-900">{value || 0}</div>
+          <div className="text-xs text-gray-500">
+            {row.bound_pages || 0} bound
           </div>
         </div>
       )
@@ -207,37 +219,35 @@ export default function GroupUploadsPage() {
     { 
       key: 'status', 
       title: 'Status', 
-      render: (v, row) => (
-        <div className="space-y-1">
-          <StatusBadge status={row.upload_status || v} type="upload" />
-          {row.ocr_status && (
-            <StatusBadge status={row.ocr_status} type="ocr" />
-          )}
-        </div>
-      )
+      render: (v, row) => {
+        const isComplete = row.page_count > 0 && row.bound_pages === row.page_count;
+        const isProcessing = row.page_count === 0 || row.bound_pages < row.page_count;
+        
+        return (
+          <div className="space-y-1">
+            <StatusBadge 
+              status={isComplete ? 'completed' : isProcessing ? 'processing' : 'pending'} 
+              type="upload" 
+            />
+            {isProcessing && (
+              <div className="text-xs text-gray-500">Processing pages...</div>
+            )}
+          </div>
+        );
+      }
     },
-    { key: 'created_at', title: 'Uploaded', render: (v) => <span>{formatDate(v)}</span> },
+    { key: 'created_at', title: 'Created', render: (v) => <span>{formatDate(v)}</span> },
     {
       key: 'actions',
       title: 'Actions',
       render: (value, row) => (
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => navigate(`/uploads/${row.id}`)}
+            onClick={() => navigate(`/candidates/${row.id}/pages`)}
             className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-indigo-50"
-            title="View"
+            title="View Pages"
           >
             <Upload className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => handleDelete(row.id)}
-            className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-50"
-            title="Delete"
-          >
-            {/* simple X icon using SVG to avoid new imports */}
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-              <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 11-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clipRule="evenodd" />
-            </svg>
           </button>
         </div>
       )
@@ -246,19 +256,19 @@ export default function GroupUploadsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <LoadingOverlay isLoading={loading && uploads.length === 0} />
+      <LoadingOverlay isLoading={loading && candidates.length === 0} />
   <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px] py-8">
         <div className="flex items-center mb-6">
           <button onClick={() => navigate('/uploads')} className="mr-3 text-gray-600 hover:text-gray-900">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{group ? group.name : 'Group'} Uploads</h1>
-            <p className="text-gray-600">View and manage uploads for this group</p>
+            <h1 className="text-2xl font-bold text-gray-900">{group ? group.name : 'Group'} Candidates</h1>
+            <p className="text-gray-600">View and manage candidates for this group</p>
           </div>
           <div className="ml-auto flex items-center space-x-3">
             <button
-              onClick={() => fetchUploads(false)}
+              onClick={() => fetchCandidates(false)}
               disabled={refreshing}
               className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
             >
@@ -281,12 +291,12 @@ export default function GroupUploadsPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="mb-4 flex flex-wrap gap-3 items-end">
             <div className="flex-1 min-w-[220px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Search uploads</label>
-              <input value={searchTerm} onChange={(e)=>{ setSearchTerm(e.target.value); setPagination(p=>({ ...p, page: 1 })); }} placeholder="Search by file, mode, or status..." className="w-full border rounded-md px-3 py-2 text-sm" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Search candidates</label>
+              <input value={searchTerm} onChange={(e)=>{ setSearchTerm(e.target.value); setPagination(p=>({ ...p, page: 1 })); }} placeholder="Search by index number or page count..." className="w-full border rounded-md px-3 py-2 text-sm" />
             </div>
           </div>
           <DataTable
-            data={uploads}
+            data={candidates}
             columns={columns}
             loading={loading}
             pagination={pagination}
