@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import UploadsPage from './pages/UploadsPage';
 import AnomaliesPage from './pages/AnomaliesPage';
+import ExamAnomaliesPage from './pages/ExamAnomaliesPage';
 import MarkingGroupsPage from './pages/MarkingGroupsPage';
 import ResultsPage from './pages/ResultsPage';
 import CandidateDetailPage from './pages/CandidateDetailPage';
@@ -40,6 +41,7 @@ export default function App(){
           <Route path="/candidates/:candidateId/pages" element={<ProtectedRoute><CandidatePagesView /></ProtectedRoute>} />
           <Route path="/pages/:pageId" element={<ProtectedRoute><PageDetailPage /></ProtectedRoute>} />
           <Route path="/anomalies" element={<ProtectedRoute><AnomaliesPage /></ProtectedRoute>} />
+          <Route path="/anomalies/exam/:examId" element={<ProtectedRoute><ExamAnomaliesPage /></ProtectedRoute>} />
           <Route path="/anomalies/:groupId" element={<ProtectedRoute><AnomaliesPage /></ProtectedRoute>} />
           <Route path="/marking" element={<ProtectedRoute><MarkingGroupsPage /></ProtectedRoute>} />
           <Route path="/results" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />

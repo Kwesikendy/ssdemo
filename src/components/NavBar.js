@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { 
@@ -21,11 +21,36 @@ export default function NavBar(){
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [anomalyCount, setAnomalyCount] = useState(0);
+
+  useEffect(() => {
+    const fetchAnomalyCount = async () => {
+      try {
+        const response = await fetch('/api/v1/anomalies/groups', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const totalAnomalies = data.data?.reduce((sum, group) => sum + group.anomaly_count, 0) || 0;
+          setAnomalyCount(totalAnomalies);
+        }
+      } catch (error) {
+        console.error('Failed to fetch anomaly count:', error);
+      }
+    };
+
+    if (user) {
+      fetchAnomalyCount();
+    }
+  }, [user]);
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Uploads', href: '/uploads', icon: Upload },
-  { name: 'Anomalies', href: '/anomalies', icon: AlertTriangle },
+    { name: 'Anomalies', href: '/anomalies', icon: AlertTriangle, badge: anomalyCount },
     { name: 'Marking', href: '/marking', icon: Cpu },
     { name: 'Results', href: '/results', icon: BarChart3 },
     { name: 'Schemes', href: '/schemes', icon: FileText },
@@ -59,7 +84,14 @@ export default function NavBar(){
                         : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <div className="relative">
+                      <Icon className="w-4 h-4" />
+                      {item.badge && item.badge > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
+                    </div>
                     <span>{item.name}</span>
                   </Link>
                 );
@@ -129,7 +161,14 @@ export default function NavBar(){
                       : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <div className="relative">
+                    <Icon className="w-5 h-5" />
+                    {item.badge && item.badge > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                  </div>
                   <span>{item.name}</span>
                 </Link>
               );

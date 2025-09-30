@@ -1,57 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Edit, Save, Download, Eye, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Download, Eye, CheckCircle, AlertCircle, FileText, Image, Star, Clock, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import LoadingOverlay from '../components/LoadingOverlay';
 import Alert from '../components/Alert';
 import api from '../api/axios';
 
 export default function CandidateDetailPage() {
-  const { uploadId, candidateId } = useParams();
+  const { candidateId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  const [upload, setUpload] = useState(null);
-  const [candidate, setCandidate] = useState(null);
-  const [markingScheme, setMarkingScheme] = useState(null);
-  const [marks, setMarks] = useState({});
+  const [candidateDetail, setCandidateDetail] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [editMode, setEditMode] = useState(false);
+  const [selectedPage, setSelectedPage] = useState(null);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   useEffect(() => {
     fetchCandidateDetails();
-  }, [uploadId, candidateId]);
+  }, [candidateId]);
 
   const fetchCandidateDetails = async () => {
     try {
       setLoading(true);
       
-      // Fetch upload details
-      const uploadResponse = await api.get(`/uploads/${uploadId}`);
-      setUpload(uploadResponse.data);
-
-      // Fetch candidate details
-      const candidateResponse = await api.get(`/uploads/${uploadId}/candidates/${candidateId}`);
-      setCandidate(candidateResponse.data);
-
-      // Fetch marking scheme
-      if (uploadResponse.data.marking_scheme_id) {
-        const schemeResponse = await api.get(`/marking-schemes/${uploadResponse.data.marking_scheme_id}`);
-        setMarkingScheme(schemeResponse.data);
-      }
-
-      // Fetch marks
-      try {
-        const marksResponse = await api.get(`/uploads/${uploadId}/candidates/${candidateId}/marks`);
-        setMarks(marksResponse.data.marks || {});
-      } catch (err) {
-        // No marks yet
-        setMarks({});
-      }
+      // Fetch candidate result details using the correct API endpoint
+      const response = await api.get(`/results/candidates/${candidateId}`);
+      setCandidateDetail(response.data);
 
       setError(null);
     } catch (err) {
@@ -62,45 +39,30 @@ export default function CandidateDetailPage() {
     }
   };
 
-  const handleSaveMarks = async () => {
-    try {
-      setSaving(true);
-      await api.post(`/uploads/${uploadId}/candidates/${candidateId}/marks`, {
-        marks
-      });
-      setSuccess('Marks updated successfully');
-      setEditMode(false);
-      setError(null);
-    } catch (err) {
-      setError('Failed to save marks');
-      console.error('Save marks error:', err);
-    } finally {
-      setSaving(false);
-    }
+  const handleViewPage = (page) => {
+    setSelectedPage(page);
+    setShowImageModal(true);
   };
 
-  const handleMarkChange = (questionId, field, value) => {
-    setMarks(prev => ({
-      ...prev,
-      [questionId]: {
-        ...prev[questionId],
-        [field]: field === 'score' ? parseFloat(value) || 0 : value,
-        marked_at: new Date().toISOString(),
-        marked_by: user.id
-      }
-    }));
+  const handleViewPageByNumber = (pageNumber) => {
+    // Find the page with the matching page number
+    const page = candidateDetail.pages?.find(p => p.page_no === pageNumber);
+    if (page) {
+      handleViewPage(page);
+    }
   };
 
   const handleDownloadScript = async () => {
     try {
-      const response = await api.get(`/uploads/${uploadId}/candidates/${candidateId}/download`, {
+      // Download all pages as a PDF or ZIP
+      const response = await api.get(`/results/candidates/${candidateId}/download`, {
         responseType: 'blob'
       });
       
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${candidate?.candidate_id}_script.pdf`);
+      link.setAttribute('download', `${candidateDetail?.index_number}_script.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -110,22 +72,7 @@ export default function CandidateDetailPage() {
     }
   };
 
-  const getTotalScore = () => {
-    return Object.values(marks).reduce((total, mark) => total + (mark.score || 0), 0);
-  };
-
-  const getTotalPossible = () => {
-    return markingScheme?.questions?.reduce((total, q) => total + (q.max_marks || 0), 0) || 0;
-  };
-
-  const getPercentage = () => {
-    const total = getTotalPossible();
-    const score = getTotalScore();
-    return total > 0 ? Math.round((score / total) * 100) : 0;
-  };
-
-  const getGrade = () => {
-    const percentage = getPercentage();
+  const getGrade = (percentage) => {
     if (percentage >= 90) return 'A';
     if (percentage >= 80) return 'B';
     if (percentage >= 70) return 'C';
@@ -133,8 +80,7 @@ export default function CandidateDetailPage() {
     return 'F';
   };
 
-  const getGradeColor = () => {
-    const grade = getGrade();
+  const getGradeColor = (grade) => {
     const colors = {
       'A': 'text-green-600 bg-green-100',
       'B': 'text-blue-600 bg-blue-100',
@@ -146,6 +92,7 @@ export default function CandidateDetailPage() {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -159,154 +106,123 @@ export default function CandidateDetailPage() {
     return <LoadingOverlay isLoading={true} />;
   }
 
+  if (!candidateDetail) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Candidate Not Found</h2>
+          <p className="text-gray-600 mb-4">The requested candidate could not be found.</p>
+          <button
+            onClick={() => navigate('/results')}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+          >
+            <ArrowLeft className="-ml-1 mr-2 h-5 w-5" />
+            Back to Results
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const percentage = candidateDetail.percentage || 0;
+  const grade = getGrade(percentage);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <LoadingOverlay isLoading={saving} />
-      
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex items-center justify-between mb-6"
-          >
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8"
+        >
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
               <button
-                onClick={() => navigate(`/uploads/${uploadId}/results`)}
+                onClick={() => navigate('/results')}
                 className="mr-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
-                  Candidate Details
+                  Candidate {candidateDetail.index_number}
                 </h1>
                 <p className="mt-2 text-gray-600">
-                  View and edit candidate performance
+                  Detailed results and script pages
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              {!editMode ? (
-                <>
-                  <button
-                    onClick={() => setEditMode(true)}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    <Edit className="-ml-1 mr-2 h-5 w-5" />
-                    Edit Marks
-                  </button>
-                  <button
-                    onClick={handleDownloadScript}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    <Download className="-ml-1 mr-2 h-5 w-5" />
-                    Download Script
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setEditMode(false)}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveMarks}
-                    disabled={saving}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Save className="-ml-1 mr-2 h-5 w-5" />
-                    {saving ? 'Saving...' : 'Save Changes'}
-                  </button>
-                </>
-              )}
+              <button
+                onClick={handleDownloadScript}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <Download className="-ml-1 mr-2 h-5 w-5" />
+                Download Script
+              </button>
             </div>
-          </motion.div>
+          </div>
 
-          {/* Candidate Info Cards */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="grid grid-cols-1 md:grid-cols-4 gap-6"
-          >
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Candidate Info</h3>
-              <div className="space-y-2">
-                <p className="text-sm">
-                  <span className="font-medium text-gray-700">ID:</span> {candidate?.candidate_id}
-                </p>
-                <p className="text-sm">
-                  <span className="font-medium text-gray-700">Name:</span> {candidate?.candidate_name || 'Unknown'}
-                </p>
-                <p className="text-sm">
-                  <span className="font-medium text-gray-700">Pages:</span> {candidate?.pages_detected || 0}
-                </p>
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <User className="h-8 w-8 text-indigo-600" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Index Number</h3>
+                  <p className="text-2xl font-bold text-gray-900">{candidateDetail.index_number}</p>
+                </div>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Upload Info</h3>
-              <div className="space-y-2">
-                <p className="text-sm">
-                  <span className="font-medium text-gray-700">File:</span> {upload?.filename}
-                </p>
-                <p className="text-sm">
-                  <span className="font-medium text-gray-700">Group:</span> {upload?.group_name}
-                </p>
-                <p className="text-sm">
-                  <span className="font-medium text-gray-700">Uploaded:</span> {upload?.created_at ? formatDate(upload.created_at) : 'Unknown'}
-                </p>
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <Star className="h-8 w-8 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Total Score</h3>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {candidateDetail.total_awarded || 0} / {candidateDetail.total_max || 0}
+                  </p>
+                </div>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Score Summary</h3>
-              <div className="space-y-2">
-                <p className="text-sm">
-                  <span className="font-medium text-gray-700">Score:</span> {getTotalScore()} / {getTotalPossible()}
-                </p>
-                <p className="text-sm">
-                  <span className="font-medium text-gray-700">Percentage:</span> {getPercentage()}%
-                </p>
-                <div className="flex items-center">
-                  <span className="font-medium text-gray-700 text-sm mr-2">Grade:</span>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGradeColor()}`}>
-                    {getGrade()}
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <CheckCircle className="h-8 w-8 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Percentage</h3>
+                  <p className="text-2xl font-bold text-gray-900">{percentage.toFixed(1)}%</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <FileText className="h-8 w-8 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Grade</h3>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-lg font-bold ${getGradeColor(grade)}`}>
+                    {grade}
                   </span>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Validation</h3>
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  {candidate?.validation_status === 'valid' ? (
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 text-yellow-600 mr-2" />
-                  )}
-                  <span className="text-sm text-gray-700">
-                    {candidate?.validation_status || 'Unknown'}
-                  </span>
-                </div>
-                <p className="text-sm">
-                  <span className="font-medium text-gray-700">Confidence:</span> {candidate?.confidence_score || 0}%
-                </p>
-                <p className="text-sm">
-                  <span className="font-medium text-gray-700">Issues:</span> {candidate?.issues_count || 0}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
 
-        {/* Error/Success Alerts */}
+        {/* Error Alert */}
         {error && (
           <Alert
             type="error"
@@ -315,127 +231,190 @@ export default function CandidateDetailPage() {
             className="mb-6"
           />
         )}
-        
-        {success && (
-          <Alert
-            type="success"
-            message={success}
-            onClose={() => setSuccess(null)}
-            className="mb-6"
-          />
-        )}
 
-        {/* Question-wise Marks */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-white rounded-lg shadow-sm border border-gray-200"
-        >
-          <div className="p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Question-wise Performance</h2>
-            
-            {markingScheme?.questions?.length > 0 ? (
-              <div className="space-y-6">
-                {markingScheme.questions.map((question, index) => {
-                  const questionMark = marks[question.id] || {};
-                  return (
-                    <div key={question.id} className="border border-gray-200 rounded-lg p-6">
-                      <div className="flex items-start justify-between mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Question Results */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="bg-white rounded-lg shadow-sm border border-gray-200"
+          >
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                <FileText className="h-6 w-6 mr-2" />
+                Question Results
+              </h2>
+              
+              {candidateDetail.sub_results && candidateDetail.sub_results.length > 0 ? (
+                <div className="space-y-4">
+                  {candidateDetail.sub_results.map((result, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <h3 className="text-lg font-medium text-gray-900">
-                            Question {index + 1}
+                            Question {result.question_number}
                           </h3>
-                          <p className="text-gray-600 mt-1">
-                            {question.text || 'No question text available'}
-                          </p>
-                          <p className="text-sm text-gray-500 mt-2">
-                            Max marks: {question.max_marks}
-                          </p>
+                          <div className="mt-2 flex items-center space-x-4">
+                            <span className="text-sm text-gray-600">
+                              Score: <span className="font-semibold">{result.awarded}</span> / {result.max_marks}
+                            </span>
+                            <span className="text-sm text-gray-600">
+                              Percentage: <span className="font-semibold">
+                                {result.max_marks > 0 ? Math.round((result.awarded / result.max_marks) * 100) : 0}%
+                              </span>
+                            </span>
+                            {result.page_number && (
+                              <button
+                                onClick={() => handleViewPageByNumber(result.page_number)}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors"
+                                title="View answer on page"
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                Page {result.page_number}
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <div className="ml-4 text-right">
-                          <p className="text-2xl font-bold text-gray-900">
-                            {questionMark.score || 0} / {question.max_marks}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {question.max_marks > 0 
-                              ? Math.round(((questionMark.score || 0) / question.max_marks) * 100)
-                              : 0}%
-                          </p>
+                        <div className="text-right">
+                          <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                            result.awarded >= result.max_marks * 0.8 
+                              ? 'text-green-800 bg-green-100' 
+                              : result.awarded >= result.max_marks * 0.6
+                              ? 'text-yellow-800 bg-yellow-100'
+                              : 'text-red-800 bg-red-100'
+                          }`}>
+                            {result.awarded >= result.max_marks * 0.8 ? 'Excellent' : 
+                             result.awarded >= result.max_marks * 0.6 ? 'Good' : 'Needs Improvement'}
+                          </div>
                         </div>
                       </div>
-
-                      {editMode ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Score
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              max={question.max_marks}
-                              step="0.5"
-                              value={questionMark.score || ''}
-                              onChange={(e) => handleMarkChange(question.id, 'score', e.target.value)}
-                              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                            />
+                      
+                      {result.feedback && (
+                        <div className="mt-3">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Feedback</h4>
+                          <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                            <p className="text-sm text-blue-800">{result.feedback}</p>
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Comments
-                            </label>
-                            <textarea
-                              rows={3}
-                              value={questionMark.comment || ''}
-                              onChange={(e) => handleMarkChange(question.id, 'comment', e.target.value)}
-                              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                              placeholder="Add feedback..."
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {/* Student Answer */}
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Student Answer</h4>
-                            <div className="bg-gray-50 p-3 rounded border">
-                              <p className="text-sm text-gray-700">
-                                {candidate?.answers?.[question.id] || 'Answer not extracted or not available'}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Comments */}
-                          {questionMark.comment && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-700 mb-2">Marker Comments</h4>
-                              <div className="bg-blue-50 p-3 rounded border border-blue-200">
-                                <p className="text-sm text-blue-800">{questionMark.comment}</p>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Marking Info */}
-                          {questionMark.marked_at && (
-                            <div className="text-xs text-gray-500">
-                              Marked on {formatDate(questionMark.marked_at)}
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No question results available</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Script Pages */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="bg-white rounded-lg shadow-sm border border-gray-200"
+          >
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                <Image className="h-6 w-6 mr-2" />
+                Script Pages
+              </h2>
+              
+              {candidateDetail.pages && candidateDetail.pages.length > 0 ? (
+                <div className="grid grid-cols-2 gap-4">
+                  {candidateDetail.pages.map((page, index) => (
+                    <div
+                      key={page.page_id}
+                      className="relative group cursor-pointer border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+                      onClick={() => handleViewPage(page)}
+                    >
+                      <div className="aspect-[3/4] bg-gray-100 flex items-center justify-center">
+                        <Image className="h-12 w-12 text-gray-400" />
+                      </div>
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
+                        <Eye className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      <div className="p-3">
+                        <p className="text-sm font-medium text-gray-900">
+                          Page {page.page_no || index + 1}
+                        </p>
+                        <p className="text-xs text-gray-500">Click to view</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Image className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No script pages available</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Notes Section */}
+        {candidateDetail.notes && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200"
+          >
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <FileText className="h-6 w-6 mr-2" />
+                Additional Notes
+              </h2>
+              <div className="bg-gray-50 p-4 rounded border">
+                <p className="text-gray-700">{candidateDetail.notes}</p>
               </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No marking scheme available</p>
-              </div>
-            )}
-          </div>
-        </motion.div>
+            </div>
+          </motion.div>
+        )}
       </div>
+
+      {/* Image Modal */}
+      {showImageModal && selectedPage && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl max-h-full overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-medium text-gray-900">
+                Page {selectedPage.page_no || 'Unknown'}
+              </h3>
+              <button
+                onClick={() => setShowImageModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="sr-only">Close</span>
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4">
+              <img
+                src={selectedPage.blob_url}
+                alt={`Page ${selectedPage.page_no || 'Unknown'}`}
+                className="max-w-full max-h-96 mx-auto rounded"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+              <div className="hidden items-center justify-center h-96 bg-gray-100 rounded">
+                <div className="text-center">
+                  <Image className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">Image could not be loaded</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

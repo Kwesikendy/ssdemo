@@ -1,43 +1,43 @@
 import React from 'react';
-import { CheckCircle, AlertTriangle, Clock, XCircle } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info, XCircle } from 'lucide-react';
 
-const StatusBadge = ({ status, size = 'sm' }) => {
-  const getStatusConfig = (status) => {
-    switch (status) {
-      case 'resolved':
+const SeverityBadge = ({ severity, size = 'sm' }) => {
+  const getSeverityConfig = (severity) => {
+    switch (severity) {
+      case 'critical':
         return {
-          icon: CheckCircle,
-          className: 'text-green-600 bg-green-100',
-          text: 'Resolved'
+          icon: XCircle,
+          className: 'text-red-600 bg-red-100',
+          text: 'Critical'
         };
-      case 'open':
+      case 'high':
+        return {
+          icon: AlertCircle,
+          className: 'text-orange-600 bg-orange-100',
+          text: 'High'
+        };
+      case 'medium':
         return {
           icon: AlertTriangle,
           className: 'text-yellow-600 bg-yellow-100',
-          text: 'Open'
+          text: 'Medium'
         };
-      case 'investigating':
+      case 'low':
         return {
-          icon: Clock,
+          icon: Info,
           className: 'text-blue-600 bg-blue-100',
-          text: 'Investigating'
-        };
-      case 'ignored':
-        return {
-          icon: XCircle,
-          className: 'text-gray-600 bg-gray-100',
-          text: 'Ignored'
+          text: 'Low'
         };
       default:
         return {
           icon: AlertTriangle,
           className: 'text-gray-600 bg-gray-100',
-          text: status
+          text: severity
         };
     }
   };
 
-  const config = getStatusConfig(status);
+  const config = getSeverityConfig(severity);
   const Icon = config.icon;
 
   const sizeClasses = {
@@ -54,4 +54,5 @@ const StatusBadge = ({ status, size = 'sm' }) => {
   );
 };
 
-export default StatusBadge;
+export default SeverityBadge;
+
