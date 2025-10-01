@@ -23,29 +23,51 @@ export default function NavBar(){
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [anomalyCount, setAnomalyCount] = useState(0);
 
-  useEffect(() => {
-    const fetchAnomalyCount = async () => {
-      try {
-        const response = await fetch('/api/v1/anomalies/groups', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const totalAnomalies = data.data?.reduce((sum, group) => sum + group.anomaly_count, 0) || 0;
-          setAnomalyCount(totalAnomalies);
-        }
-      } catch (error) {
-        console.error('Failed to fetch anomaly count:', error);
+  const fetchAnomalyCount = async () => {
+    try {
+      const response = await fetch('/api/v1/anomalies/groups', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const totalAnomalies = data.data?.reduce((sum, group) => sum + (group.anomaly_count || 0), 0) || 0;
+        setAnomalyCount(totalAnomalies);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch anomaly count:', error);
+    }
+  };
 
+  useEffect(() => {
     if (user) {
       fetchAnomalyCount();
     }
   }, [user]);
+
+  // Refresh anomaly count when location changes (e.g., after resolving anomalies)
+  useEffect(() => {
+    if (user && location.pathname === '/anomalies') {
+      fetchAnomalyCount();
+    }
+  }, [location.pathname, user]);
+
+  // Listen for custom events to refresh anomaly count
+  useEffect(() => {
+    const handleAnomalyUpdate = () => {
+      fetchAnomalyCount();
+    };
+
+    window.addEventListener('anomalyResolved', handleAnomalyUpdate);
+    window.addEventListener('anomalyCreated', handleAnomalyUpdate);
+
+    return () => {
+      window.removeEventListener('anomalyResolved', handleAnomalyUpdate);
+      window.removeEventListener('anomalyCreated', handleAnomalyUpdate);
+    };
+  }, []);
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -78,21 +100,19 @@ export default function NavBar(){
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 relative ${
                       isActive(item.href)
                         ? 'bg-indigo-100 text-indigo-700 shadow-sm'
                         : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
                     }`}
                   >
-                    <div className="relative">
-                      <Icon className="w-4 h-4" />
-                      {item.badge && item.badge > 0 && (
-                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                          {item.badge > 99 ? '99+' : item.badge}
-                        </span>
-                      )}
-                    </div>
+                    <Icon className="w-4 h-4" />
                     <span>{item.name}</span>
+                    {item.badge > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-medium shadow-sm animate-pulse">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -155,21 +175,19 @@ export default function NavBar(){
                   key={item.name}
                   to={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`block px-3 py-2 rounded-md text-base font-medium transition-all duration-200 flex items-center space-x-3 ${
+                  className={`block px-3 py-2 rounded-md text-base font-medium transition-all duration-200 flex items-center space-x-3 relative ${
                     isActive(item.href)
                       ? 'bg-indigo-100 text-indigo-700'
                       : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
                   }`}
                 >
-                  <div className="relative">
-                    <Icon className="w-5 h-5" />
-                    {item.badge && item.badge > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </span>
-                    )}
-                  </div>
+                  <Icon className="w-5 h-5" />
                   <span>{item.name}</span>
+                  {item.badge > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-medium shadow-sm animate-pulse">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}

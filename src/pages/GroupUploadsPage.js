@@ -164,7 +164,19 @@ export default function GroupUploadsPage() {
       
       toast.success(`Successfully uploaded ${files.length} file(s)! Processing will begin automatically.`);
       handleCloseUpload();
-      fetchCandidates();
+      await fetchCandidates();
+      
+      // Check for anomalies after upload
+      try {
+        const anomalyResponse = await api.get('/anomalies');
+        const anomalies = anomalyResponse.data.data?.anomalies || [];
+        if (anomalies.length > 0) {
+          toast.warning(`Upload completed with ${anomalies.length} anomaly(ies) detected. Please review and resolve them.`);
+        }
+      } catch (err) {
+        console.log('Could not check for anomalies:', err);
+        // Don't show error toast for this, as it's not critical
+      }
     } catch (e) {
       console.error('Upload failed', e);
       const errorMsg = 'Upload failed. Please try again.';

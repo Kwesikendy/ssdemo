@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   AlertTriangle, 
@@ -8,8 +8,11 @@ import {
   Clock,
   FileText,
   Play,
+  X,
+  Eye,
   Edit3,
-  X
+  Save,
+  RotateCcw
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -25,14 +28,25 @@ const ExamAnomaliesPage = () => {
   const [actionLoading, setActionLoading] = useState({});
   const [editingAnomaly, setEditingAnomaly] = useState(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
+  const [selectedAnomaly, setSelectedAnomaly] = useState(null);
+  const [editingOcrText, setEditingOcrText] = useState('');
+  const [isEditingOcr, setIsEditingOcr] = useState(false);
+  const [llmCheckResult, setLlmCheckResult] = useState(null);
+  const [isCheckingLlm, setIsCheckingLlm] = useState(false);
+  const [canResolve, setCanResolve] = useState(false);
+  const [ocrProcessing, setOcrProcessing] = useState(new Set());
+  const [manualEntryModal, setManualEntryModal] = useState({
+    open: false,
+    anomalyId: null,
+    indexNumber: '',
+    pageNumber: ''
+  });
+  
+  // Use refs to avoid infinite loops
+  const anomaliesRef = useRef([]);
+  const selectedAnomalyRef = useRef(null);
 
-  useEffect(() => {
-    if (examId) {
-      fetchAnomalies();
-    }
-  }, [examId]);
-
-  const fetchAnomalies = async () => {
+  const fetchAnomalies = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/v1/anomalies/exam/${examId}`, {
@@ -47,18 +61,50 @@ const ExamAnomaliesPage = () => {
       }
 
       const data = await response.json();
-      setAnomalies(data.data || []);
+      const newAnomalies = data.data || [];
+      
+      // Check if any anomaly's OCR text has changed (for processing state)
+      const hasOcrChanges = newAnomalies.some(newAnomaly => {
+        const oldAnomaly = anomaliesRef.current.find(old => old.id === newAnomaly.id);
+        return oldAnomaly && oldAnomaly.ocr_text !== newAnomaly.ocr_text;
+      });
+      
+      if (hasOcrChanges) {
+        // Clear processing state for all anomalies
+        setOcrProcessing(new Set());
+        toast.success('OCR text updated successfully!');
+        
+        // Update selected anomaly if it's one of the changed ones
+        if (selectedAnomalyRef.current) {
+          const updatedAnomaly = newAnomalies.find(a => a.id === selectedAnomalyRef.current.id);
+          if (updatedAnomaly) {
+            setSelectedAnomaly(updatedAnomaly);
+            setEditingOcrText(updatedAnomaly.ocr_text || '');
+            selectedAnomalyRef.current = updatedAnomaly;
+          }
+        }
+      }
+      
+      setAnomalies(newAnomalies);
+      anomaliesRef.current = newAnomalies;
     } catch (err) {
       setError(err.message);
       toast.error('Failed to load anomalies');
     } finally {
       setLoading(false);
     }
-  };
+  }, [examId]);
+
+  useEffect(() => {
+    if (examId) {
+      fetchAnomalies();
+    }
+  }, [examId]);
 
   const handleRetryOCR = async (anomalyId) => {
     try {
       setActionLoading(prev => ({ ...prev, [anomalyId]: true }));
+      setOcrProcessing(prev => new Set(prev).add(anomalyId));
       
       const response = await fetch(`/api/v1/anomalies/${anomalyId}/retry-ocr`, {
         method: 'POST',
@@ -72,13 +118,35 @@ const ExamAnomaliesPage = () => {
         throw new Error('Failed to retry OCR');
       }
 
-      toast.success('OCR retry job queued successfully');
-      // Refresh the anomalies list after a short delay
-      setTimeout(() => {
+      toast.success('OCR retry job queued successfully. Processing...');
+      
+      // Refresh the anomalies list multiple times to show progress
+      let refreshCount = 0;
+      const maxRefreshes = 10; // 30 seconds total (3 seconds * 10)
+      
+      const refreshInterval = setInterval(() => {
+        refreshCount++;
         fetchAnomalies();
-      }, 2000);
+        
+        // Stop refreshing after max refreshes or if we detect changes
+        if (refreshCount >= maxRefreshes) {
+          clearInterval(refreshInterval);
+          setOcrProcessing(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(anomalyId);
+            return newSet;
+          });
+          toast.success('OCR processing completed. Please check the results.');
+        }
+      }, 3000);
+      
     } catch (err) {
-      toast.error('Failed to retry OCR');
+      toast.error('Failed to retry OCR: ' + err.message);
+      setOcrProcessing(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(anomalyId);
+        return newSet;
+      });
     } finally {
       setActionLoading(prev => ({ ...prev, [anomalyId]: false }));
     }
@@ -114,23 +182,159 @@ const ExamAnomaliesPage = () => {
     }
   };
 
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case 'critical': return 'text-red-600 bg-red-100';
-      case 'high': return 'text-orange-600 bg-orange-100';
-      case 'medium': return 'text-yellow-600 bg-yellow-100';
-      case 'low': return 'text-blue-600 bg-blue-100';
-      default: return 'text-gray-600 bg-gray-100';
+  const handleViewAnomaly = (anomaly) => {
+    setSelectedAnomaly(anomaly);
+    selectedAnomalyRef.current = anomaly;
+    setEditingOcrText(anomaly.ocr_text || '');
+    setIsEditingOcr(false);
+    setLlmCheckResult(null);
+    setCanResolve(false);
+  };
+
+  const handleEditOcrText = () => {
+    setIsEditingOcr(true);
+  };
+
+  const handleSaveOcrText = async () => {
+    try {
+      setActionLoading(prev => ({ ...prev, [selectedAnomaly.id]: true }));
+      
+      const response = await fetch(`/api/v1/anomalies/${selectedAnomaly.id}/update-ocr`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ocr_text: editingOcrText
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update OCR text');
+      }
+
+      toast.success('OCR text updated successfully');
+      setIsEditingOcr(false);
+      fetchAnomalies();
+    } catch (err) {
+      toast.error('Failed to update OCR text');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [selectedAnomaly.id]: false }));
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'resolved': return 'text-green-600 bg-green-100';
-      case 'investigating': return 'text-blue-600 bg-blue-100';
-      case 'open': return 'text-yellow-600 bg-yellow-100';
-      case 'ignored': return 'text-gray-600 bg-gray-100';
-      default: return 'text-gray-600 bg-gray-100';
+  const handleCheckWithLLM = async () => {
+    try {
+      setIsCheckingLlm(true);
+      
+      const response = await fetch(`/api/v1/anomalies/${selectedAnomaly.id}/check-llm`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ocr_text: editingOcrText
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to check anomaly with LLM');
+      }
+
+      const result = await response.json();
+      
+      setLlmCheckResult(result);
+      setCanResolve(result.can_resolve);
+      
+      if (result.can_resolve) {
+        toast.success(result.message);
+      } else {
+        toast.warning(result.message);
+      }
+    } catch (err) {
+      toast.error('Failed to check anomaly with LLM');
+    } finally {
+      setIsCheckingLlm(false);
+    }
+  };
+
+  const handleResolveWithLLM = async () => {
+    try {
+      setActionLoading(prev => ({ ...prev, [selectedAnomaly.id]: true }));
+      
+      const response = await fetch(`/api/v1/anomalies/${selectedAnomaly.id}/resolve-llm`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ocr_text: editingOcrText
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to resolve anomaly with LLM');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success('Anomaly resolved successfully with LLM');
+        setSelectedAnomaly(null);
+        setLlmCheckResult(null);
+        setCanResolve(false);
+        fetchAnomalies();
+        // Dispatch event to update navbar count
+        window.dispatchEvent(new CustomEvent('anomalyResolved'));
+      } else {
+        toast.error('LLM could not resolve the anomaly. Please check the OCR text.');
+      }
+    } catch (err) {
+      toast.error('Failed to resolve anomaly with LLM');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [selectedAnomaly.id]: false }));
+    }
+  };
+
+  const handleManualEntry = async () => {
+    try {
+      setActionLoading(prev => ({ ...prev, [manualEntryModal.anomalyId]: true }));
+      
+      const response = await fetch(`/api/v1/anomalies/${manualEntryModal.anomalyId}/resolve-manual`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          index_number: manualEntryModal.indexNumber,
+          page_number: manualEntryModal.pageNumber
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to resolve anomaly manually');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success('Anomaly resolved successfully with manual entry');
+        setManualEntryModal({ open: false, anomalyId: null, indexNumber: '', pageNumber: '' });
+        setSelectedAnomaly(null);
+        fetchAnomalies();
+        // Dispatch event to update navbar count
+        window.dispatchEvent(new CustomEvent('anomalyResolved'));
+      } else {
+        toast.error('Failed to resolve anomaly manually');
+      }
+    } catch (err) {
+      toast.error('Failed to resolve anomaly manually');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [manualEntryModal.anomalyId]: false }));
     }
   };
 
@@ -199,71 +403,132 @@ const ExamAnomaliesPage = () => {
           </div>
         </div>
 
-        {/* Anomalies List */}
-        <div className="space-y-4">
-          {anomalies.map((anomaly) => (
-            <div key={anomaly.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-6 py-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      {getAnomalyTypeIcon(anomaly.anomaly_type)}
-                      <SeverityBadge severity={anomaly.severity} size="sm" />
-                      <StatusBadge status={anomaly.status} size="sm" />
-                      <span className="text-sm text-gray-500">
-                        {anomaly.anomaly_type.replace(/_/g, ' ').toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-gray-900 mb-2">{anomaly.description}</p>
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-3 w-3" />
-                        <span>Created {new Date(anomaly.created_at).toLocaleDateString()}</span>
-                      </div>
-                      {anomaly.page_number && (
-                        <div className="flex items-center space-x-1">
-                          <FileText className="h-3 w-3" />
-                          <span>Page {anomaly.page_number}</span>
-                        </div>
-                      )}
-                    </div>
-                    {anomaly.resolution_notes && (
-                      <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-700">
-                          <strong>Resolution Notes:</strong> {anomaly.resolution_notes}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2 ml-4">
-                    {anomaly.status !== 'resolved' && (
-                      <>
-                        <button
-                          onClick={() => handleRetryOCR(anomaly.id)}
-                          disabled={actionLoading[anomaly.id]}
-                          className="flex items-center space-x-1 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
-                        >
-                          {actionLoading[anomaly.id] ? (
-                            <LoadingSpinner size="sm" text="" />
-                          ) : (
-                            <Play className="h-4 w-4" />
-                          )}
-                          <span>Retry OCR</span>
-                        </button>
-                        <button
-                          onClick={() => setEditingAnomaly(anomaly.id)}
-                          className="flex items-center space-x-1 px-3 py-2 text-green-600 hover:bg-green-50 rounded-lg"
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                          <span>Resolve</span>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
+        {/* Anomalies Table */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-blue-700">
+                💡 <strong>Tip:</strong> Click on any row to view details and access action buttons
+              </p>
+              {anomalies.length > 0 && (
+                <button
+                  onClick={() => handleViewAnomaly(anomalies[0])}
+                  className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                >
+                  Test Modal (First Anomaly)
+                </button>
+              )}
             </div>
-          ))}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Severity
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Page
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {anomalies.map((anomaly) => (
+                  <tr 
+                    key={anomaly.id} 
+                    className="hover:bg-blue-50 cursor-pointer transition-colors duration-200"
+                    onClick={() => handleViewAnomaly(anomaly)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {getAnomalyTypeIcon(anomaly.anomaly_type)}
+                        <span className="ml-2 text-sm font-medium text-gray-900">
+                          {anomaly.anomaly_type.replace(/_/g, ' ').toUpperCase()}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 max-w-xs truncate">
+                        {anomaly.description}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <SeverityBadge severity={anomaly.severity} size="sm" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StatusBadge status={anomaly.status} size="sm" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {anomaly.page_number ? `Page ${anomaly.page_number}` : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(anomaly.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewAnomaly(anomaly);
+                          }}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        {anomaly.status !== 'resolved' && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRetryOCR(anomaly.id);
+                              }}
+                              disabled={actionLoading[anomaly.id] || ocrProcessing.has(anomaly.id)}
+                              className={`disabled:opacity-50 ${
+                                ocrProcessing.has(anomaly.id) 
+                                  ? 'text-blue-700' 
+                                  : 'text-blue-600 hover:text-blue-900'
+                              }`}
+                              title={ocrProcessing.has(anomaly.id) ? 'Processing OCR...' : 'Retry OCR'}
+                            >
+                              {actionLoading[anomaly.id] || ocrProcessing.has(anomaly.id) ? (
+                                <LoadingSpinner size="sm" text="" />
+                              ) : (
+                                <RotateCcw className="h-4 w-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingAnomaly(anomaly.id);
+                              }}
+                              className="text-green-600 hover:text-green-900"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {anomalies.length === 0 && (
@@ -322,6 +587,322 @@ const ExamAnomaliesPage = () => {
                   <LoadingSpinner size="sm" text="Resolving..." />
                 ) : (
                   'Resolve'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detailed Anomaly Modal */}
+      {selectedAnomaly && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                {getAnomalyTypeIcon(selectedAnomaly.anomaly_type)}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {selectedAnomaly.anomaly_type.replace(/_/g, ' ').toUpperCase()}
+                  </h3>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <SeverityBadge severity={selectedAnomaly.severity} size="sm" />
+                    <StatusBadge status={selectedAnomaly.status} size="sm" />
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedAnomaly(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+                {/* Image Section */}
+                <div className="space-y-4">
+                  <h4 className="text-sm sm:text-md font-medium text-gray-900">Page Image</h4>
+                  {selectedAnomaly.page_blob_url ? (
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <img
+                        src={selectedAnomaly.page_blob_url}
+                        alt="Page content"
+                        className="w-full h-auto max-h-64 sm:max-h-96 object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="border border-gray-200 rounded-lg p-4 sm:p-8 text-center text-gray-500">
+                      <FileText className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-2" />
+                      <p className="text-sm sm:text-base">No image available</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* OCR Text Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm sm:text-md font-medium text-gray-900">OCR Text</h4>
+                    {!isEditingOcr && (
+                      <button
+                        onClick={handleEditOcrText}
+                        className="flex items-center space-x-1 px-2 py-1 text-blue-600 hover:bg-blue-50 rounded-lg text-sm"
+                      >
+                        <Edit3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Edit</span>
+                      </button>
+                    )}
+                  </div>
+                  
+                  {isEditingOcr ? (
+                    <div className="space-y-3">
+                      <textarea
+                        value={editingOcrText}
+                        onChange={(e) => setEditingOcrText(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        rows={8}
+                        placeholder="Enter OCR text..."
+                      />
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={handleSaveOcrText}
+                          disabled={actionLoading[selectedAnomaly.id]}
+                          className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+                        >
+                          {actionLoading[selectedAnomaly.id] ? (
+                            <LoadingSpinner size="sm" text="" />
+                          ) : (
+                            <Save className="h-3 w-3 sm:h-4 sm:w-4" />
+                          )}
+                          <span>Save</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditingOcr(false);
+                            setEditingOcrText(selectedAnomaly.ocr_text || '');
+                          }}
+                          className="px-3 py-1 text-gray-600 hover:text-gray-800 text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50 max-h-48 sm:max-h-64 overflow-y-auto">
+                      <pre className="text-xs sm:text-sm text-gray-900 whitespace-pre-wrap font-mono">
+                        {selectedAnomaly.ocr_text || 'No OCR text available'}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Description and Metadata */}
+              <div className="mt-6 space-y-4">
+                <div>
+                  <h4 className="text-md font-medium text-gray-900 mb-2">Description</h4>
+                  <p className="text-gray-700">{selectedAnomaly.description}</p>
+                </div>
+
+                {selectedAnomaly.resolution_notes && (
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 mb-2">Resolution Notes</h4>
+                    <p className="text-gray-700 bg-green-50 p-3 rounded-lg">
+                      {selectedAnomaly.resolution_notes}
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                  <div>
+                    <span className="font-medium">Created:</span> {new Date(selectedAnomaly.created_at).toLocaleString()}
+                  </div>
+                  {selectedAnomaly.page_number && (
+                    <div>
+                      <span className="font-medium">Page:</span> {selectedAnomaly.page_number}
+                    </div>
+                  )}
+                  {selectedAnomaly.candidate_index_number && (
+                    <div>
+                      <span className="font-medium">Candidate:</span> {selectedAnomaly.candidate_index_number}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* LLM Check Results */}
+            {llmCheckResult && (
+              <div className="flex-shrink-0 p-4 bg-blue-50 border-t border-blue-200">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className={`w-3 h-3 rounded-full ${canResolve ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                  <span className="font-medium text-gray-900 text-sm sm:text-base">
+                    {canResolve ? 'Ready to Resolve' : 'Cannot Resolve'}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-gray-700 mb-2">{llmCheckResult.message}</p>
+                {llmCheckResult.extracted_data && Object.keys(llmCheckResult.extracted_data).length > 0 && (
+                  <div className="text-xs sm:text-sm text-gray-600">
+                    <strong>Extracted Data:</strong>
+                    <ul className="ml-4 mt-1">
+                      {Object.entries(llmCheckResult.extracted_data).map(([key, value]) => (
+                        <li key={key} className="capitalize">
+                          {key.replace('_', ' ')}: {value}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50">
+              <div className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <button
+                  onClick={() => handleRetryOCR(selectedAnomaly.id)}
+                  disabled={actionLoading[selectedAnomaly.id] || ocrProcessing.has(selectedAnomaly.id)}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg disabled:opacity-50 text-sm sm:text-base ${
+                    ocrProcessing.has(selectedAnomaly.id) 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'text-blue-600 hover:bg-blue-50'
+                  }`}
+                >
+                  {actionLoading[selectedAnomaly.id] || ocrProcessing.has(selectedAnomaly.id) ? (
+                    <LoadingSpinner size="sm" text="" />
+                  ) : (
+                    <RotateCcw className="h-4 w-4" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {ocrProcessing.has(selectedAnomaly.id) ? 'Processing OCR...' : 'Retry OCR'}
+                  </span>
+                  <span className="sm:hidden">
+                    {ocrProcessing.has(selectedAnomaly.id) ? 'Processing...' : 'Retry'}
+                  </span>
+                </button>
+                    <button
+                      onClick={handleCheckWithLLM}
+                      disabled={isCheckingLlm || actionLoading[selectedAnomaly.id]}
+                      className="flex items-center space-x-2 px-3 py-2 text-purple-600 hover:bg-purple-50 rounded-lg disabled:opacity-50 text-sm sm:text-base"
+                    >
+                      {isCheckingLlm ? (
+                        <LoadingSpinner size="sm" text="" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                      <span className="hidden sm:inline">Check with LLM</span>
+                      <span className="sm:hidden">Check LLM</span>
+                    </button>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <button
+                      onClick={() => setSelectedAnomaly(null)}
+                      className="px-3 py-2 text-gray-600 hover:text-gray-800 text-sm sm:text-base"
+                    >
+                      Close
+                    </button>
+                    {selectedAnomaly.status !== 'resolved' && (
+                      <>
+                        <button
+                          onClick={() => handleResolveWithLLM()}
+                          disabled={actionLoading[selectedAnomaly.id] || !canResolve}
+                          className={`flex items-center space-x-2 px-3 py-2 rounded-lg disabled:opacity-50 text-sm sm:text-base ${
+                            canResolve 
+                              ? 'bg-green-600 text-white hover:bg-green-700' 
+                              : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                          }`}
+                        >
+                          {actionLoading[selectedAnomaly.id] ? (
+                            <LoadingSpinner size="sm" text="" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4" />
+                          )}
+                          <span className="hidden sm:inline">Resolve Now</span>
+                          <span className="sm:hidden">Resolve</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setManualEntryModal({
+                              open: true,
+                              anomalyId: selectedAnomaly.id,
+                              indexNumber: selectedAnomaly.candidate_index_number || '',
+                              pageNumber: selectedAnomaly.page_number || ''
+                            });
+                          }}
+                          className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base"
+                        >
+                          <span className="hidden sm:inline">Manually Enter Values</span>
+                          <span className="sm:hidden">Manual Entry</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Entry Modal */}
+      {manualEntryModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Manually Enter Values</h3>
+              <button
+                onClick={() => setManualEntryModal({ open: false, anomalyId: null, indexNumber: '', pageNumber: '' })}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Index Number
+                </label>
+                <input
+                  type="text"
+                  value={manualEntryModal.indexNumber}
+                  onChange={(e) => setManualEntryModal(prev => ({ ...prev, indexNumber: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter candidate index number"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Page Number
+                </label>
+                <input
+                  type="number"
+                  value={manualEntryModal.pageNumber}
+                  onChange={(e) => setManualEntryModal(prev => ({ ...prev, pageNumber: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter page number"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setManualEntryModal({ open: false, anomalyId: null, indexNumber: '', pageNumber: '' })}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleManualEntry}
+                disabled={actionLoading[manualEntryModal.anomalyId] || !manualEntryModal.indexNumber || !manualEntryModal.pageNumber}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {actionLoading[manualEntryModal.anomalyId] ? (
+                  <LoadingSpinner size="sm" text="Saving..." />
+                ) : (
+                  'Save'
                 )}
               </button>
             </div>
