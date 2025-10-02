@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
   AlertTriangle, 
   RefreshCw, 
   CheckCircle, 
   Eye, 
-  Clock
+  Clock,
+  Users,
+  FileText
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import LoadingSpinner from '../components/LoadingSpinner';
+import EnhancedDataTable from '../components/EnhancedDataTable';
+import StatsCard from '../components/StatsCard';
+import LoadingOverlay from '../components/LoadingOverlay';
 import StatusBadge from '../components/StatusBadge';
 import SeverityBadge from '../components/SeverityBadge';
 
@@ -17,10 +22,20 @@ const AnomaliesPage = () => {
   const [anomalyGroups, setAnomalyGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({});
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    per_page: 10,
+    total: 0,
+    total_pages: 0
+  });
 
   useEffect(() => {
     fetchAnomalyGroups();
-  }, []);
+  }, [pagination.page, pagination.per_page, searchTerm, filters, sortField, sortDirection]);
 
   const fetchAnomalyGroups = async () => {
     try {
@@ -37,7 +52,23 @@ const AnomaliesPage = () => {
       }
 
       const data = await response.json();
-      setAnomalyGroups(data.data || []);
+      const groups = data.data || [];
+      setAnomalyGroups(groups);
+      
+      // Update pagination with filtered data
+      const filtered = groups.filter(group => {
+        if (searchTerm) {
+          return group.exam_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                 group.exam_id.toLowerCase().includes(searchTerm.toLowerCase());
+        }
+        return true;
+      });
+      
+      setPagination(prev => ({
+        ...prev,
+        total: filtered.length,
+        total_pages: Math.ceil(filtered.length / prev.per_page)
+      }));
     } catch (err) {
       setError(err.message);
       toast.error('Failed to load anomalies');
@@ -46,124 +77,288 @@ const AnomaliesPage = () => {
     }
   };
 
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleSort = (field, direction) => {
+    setSortField(field);
+    setSortDirection(direction);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleFilter = (newFilters) => {
+    setFilters(newFilters);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (page, perPage = pagination.per_page) => {
+    setPagination(prev => ({ ...prev, page, per_page: perPage }));
+  };
+
+  const availableFilters = [
+    {
+      key: 'severity',
+      label: 'Severity',
+      type: 'select',
+      options: [
+        { value: 'low', label: 'Low' },
+        { value: 'medium', label: 'Medium' },
+        { value: 'high', label: 'High' },
+        { value: 'critical', label: 'Critical' }
+      ]
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: [
+        { value: 'open', label: 'Open' },
+        { value: 'resolved', label: 'Resolved' },
+        { value: 'investigating', label: 'Investigating' },
+        { value: 'ignored', label: 'Ignored' }
+      ]
+    }
+  ];
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const columns = [
+    {
+      key: 'exam_name',
+      title: 'Exam Group',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center">
+          <div className="flex-shrink-0 h-10 w-10">
+            <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-orange-600" />
+            </div>
+          </div>
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">{value}</div>
+            <div className="text-sm text-gray-500">ID: {row.exam_id}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'anomaly_count',
+      title: 'Anomalies',
+      sortable: true,
+      render: (value) => (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          {value} {value === 1 ? 'anomaly' : 'anomalies'}
+        </span>
+      )
+    },
+    {
+      key: 'severity_summary',
+      title: 'Severity',
+      sortable: false,
+      render: (value, row) => {
+        const severities = row.anomalies?.map(a => a.severity) || [];
+        const highestSeverity = severities.includes('critical') ? 'critical' :
+                               severities.includes('high') ? 'high' :
+                               severities.includes('medium') ? 'medium' : 'low';
+        return <SeverityBadge severity={highestSeverity} size="sm" />;
+      }
+    },
+    {
+      key: 'status_summary',
+      title: 'Status',
+      sortable: false,
+      render: (value, row) => {
+        const statuses = row.anomalies?.map(a => a.status) || [];
+        const hasOpen = statuses.includes('open');
+        const hasInvestigating = statuses.includes('investigating');
+        const status = hasOpen ? 'open' : hasInvestigating ? 'investigating' : 'resolved';
+        return <StatusBadge status={status} size="sm" />;
+      }
+    },
+    {
+      key: 'created_at',
+      title: 'Detected',
+      sortable: true,
+      render: (value) => (
+        <div className="flex items-center text-sm text-gray-500">
+          <Clock className="h-4 w-4 mr-1" />
+          {formatDate(value)}
+        </div>
+      )
+    },
+    {
+      key: 'actions',
+      title: 'Actions',
+      render: (value, row) => (
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => navigate(`/anomalies/exam/${row.exam_id}`)}
+            className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-indigo-50"
+            title="View Details"
+          >
+            <Eye className="h-4 w-4" />
+          </button>
+        </div>
+      )
+    }
+  ];
+
+  // Filter and paginate data
+  const filteredData = useMemo(() => {
+    let filtered = [...anomalyGroups];
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(group => 
+        group.exam_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        group.exam_id.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Apply other filters
+    if (filters.severity) {
+      filtered = filtered.filter(group => 
+        group.anomalies?.some(a => a.severity === filters.severity)
+      );
+    }
+    
+    if (filters.status) {
+      filtered = filtered.filter(group => 
+        group.anomalies?.some(a => a.status === filters.status)
+      );
+    }
+    
+    return filtered;
+  }, [anomalyGroups, searchTerm, filters]);
+
+  const paginatedData = useMemo(() => {
+    const start = (pagination.page - 1) * pagination.per_page;
+    const end = start + pagination.per_page;
+    return filteredData.slice(start, end);
+  }, [filteredData, pagination.page, pagination.per_page]);
+
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner size="lg" text="Loading anomalies..." />
-      </div>
-    );
+    return <LoadingOverlay isLoading={true} />;
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Anomalies</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={fetchAnomalyGroups}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (anomalyGroups.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Anomalies Found</h2>
-          <p className="text-gray-600">All exams are processing correctly with no issues detected.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Anomalies</h1>
-              <p className="mt-2 text-gray-600">
-                Review and resolve issues detected during OCR processing
-              </p>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Anomalies</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
             <button
               onClick={fetchAnomalyGroups}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              <RefreshCw className="h-4 w-4" />
-              <span>Refresh</span>
+              Try Again
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Anomaly Groups */}
-        <div className="space-y-6">
-          {anomalyGroups.map((group) => (
-            <div key={group.exam_id} className="bg-white rounded-lg shadow-sm border border-gray-200">
-              {/* Group Header */}
-              <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <AlertTriangle className="h-5 w-5 text-orange-500" />
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{group.exam_name}</h3>
-                      <p className="text-sm text-gray-600">
-                        {group.anomaly_count} {group.anomaly_count === 1 ? 'anomaly' : 'anomalies'} detected
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => navigate(`/anomalies/exam/${group.exam_id}`)}
-                    className="flex items-center space-x-2 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                  >
-                    <Eye className="h-4 w-4" />
-                    <span>View Details</span>
-                  </button>
-                </div>
-              </div>
+  const totalAnomalies = anomalyGroups.reduce((sum, group) => sum + (group.anomaly_count || 0), 0);
+  const openAnomalies = anomalyGroups.reduce((sum, group) => 
+    sum + (group.anomalies?.filter(a => a.status === 'open').length || 0), 0
+  );
 
-              {/* Anomalies Preview */}
-              <div className="px-6 py-4">
-                <div className="space-y-3">
-                  {group.anomalies.slice(0, 3).map((anomaly) => (
-                    <div key={anomaly.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <SeverityBadge severity={anomaly.severity} size="sm" />
-                        <StatusBadge status={anomaly.status} size="sm" />
-                        <span className="text-sm text-gray-700">{anomaly.description}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-xs text-gray-500">
-                        <Clock className="h-3 w-3" />
-                        <span>{new Date(anomaly.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {group.anomalies.length > 3 && (
-                    <div className="text-center">
-                      <button
-                        onClick={() => navigate(`/anomalies/exam/${group.exam_id}`)}
-                        className="text-sm text-blue-600 hover:text-blue-700"
-                      >
-                        View {group.anomalies.length - 3} more anomalies...
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="md:flex md:items-center md:justify-between mb-8"
+        >
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-bold text-gray-900 sm:truncate">
+              Anomalies
+            </h1>
+            <p className="mt-2 text-gray-600">
+              Review and resolve issues detected during OCR processing
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Stats Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+        >
+          <StatsCard
+            title="Total Anomalies"
+            value={totalAnomalies}
+            icon={AlertTriangle}
+            iconColor="red"
+          />
+          <StatsCard
+            title="Open Issues"
+            value={openAnomalies}
+            icon={Clock}
+            iconColor="orange"
+          />
+          <StatsCard
+            title="Exam Groups"
+            value={anomalyGroups.length}
+            icon={FileText}
+            iconColor="blue"
+          />
+        </motion.div>
+
+        {/* Enhanced Data Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <EnhancedDataTable
+            data={paginatedData}
+            columns={columns}
+            loading={loading}
+            pagination={{
+              ...pagination,
+              total: filteredData.length,
+              total_pages: Math.ceil(filteredData.length / pagination.per_page)
+            }}
+            onPageChange={handlePageChange}
+            onSort={handleSort}
+            onSearch={handleSearch}
+            onFilter={handleFilter}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            searchTerm={searchTerm}
+            filters={filters}
+            availableFilters={availableFilters}
+            title="Anomaly Groups"
+            subtitle="Groups with detected anomalies that need attention"
+            showSearch={true}
+            showFilters={true}
+            showPagination={true}
+            showPerPageSelector={true}
+            emptyStateIcon="✅"
+            emptyStateMessage="No anomalies found. All exams are processing correctly!"
+            onRefresh={fetchAnomalyGroups}
+          />
+        </motion.div>
       </div>
     </div>
   );

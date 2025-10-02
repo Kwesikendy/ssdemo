@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Download, Eye, BarChart3, ArrowLeft, Filter, Search } from 'lucide-react';
-import DataTable from '../components/DataTable';
+import EnhancedDataTable from '../components/EnhancedDataTable';
 import StatsCard from '../components/StatsCard';
 import LoadingOverlay from '../components/LoadingOverlay';
 import Alert from '../components/Alert';
@@ -17,6 +17,9 @@ export default function ResultsPage() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
+  const [filters, setFilters] = useState({});
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   // Group list mode
   const [groups, setGroups] = useState([]);
@@ -39,7 +42,7 @@ export default function ResultsPage() {
     // Group mode
     loadGroupMeta();
     loadGroupResults();
-  }, [groupId, groupsPagination.page, pagination.page, searchTerm, gradeFilter]);
+  }, [groupId, groupsPagination.page, pagination.page, searchTerm, gradeFilter, filters, sortField, sortDirection]);
 
   const loadGroups = async () => {
     try {
@@ -138,24 +141,115 @@ export default function ResultsPage() {
     );
   };
 
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    if (inGroupMode) {
+      setPagination(prev => ({ ...prev, page: 1 }));
+    } else {
+      setGroupsPagination(prev => ({ ...prev, page: 1 }));
+    }
+  };
+
+  const handleSort = (field, direction) => {
+    setSortField(field);
+    setSortDirection(direction);
+    if (inGroupMode) {
+      setPagination(prev => ({ ...prev, page: 1 }));
+    } else {
+      setGroupsPagination(prev => ({ ...prev, page: 1 }));
+    }
+  };
+
+  const handleFilter = (newFilters) => {
+    setFilters(newFilters);
+    if (inGroupMode) {
+      setPagination(prev => ({ ...prev, page: 1 }));
+    } else {
+      setGroupsPagination(prev => ({ ...prev, page: 1 }));
+    }
+  };
+
+  const handlePageChange = (page, perPage = inGroupMode ? pagination.per_page : groupsPagination.per_page) => {
+    if (inGroupMode) {
+      setPagination(prev => ({ ...prev, page, per_page: perPage }));
+    } else {
+      setGroupsPagination(prev => ({ ...prev, page, per_page: perPage }));
+    }
+  };
+
+  const groupAvailableFilters = [
+    {
+      key: 'has_math',
+      label: 'Has Math',
+      type: 'select',
+      options: [
+        { value: 'true', label: 'Yes' },
+        { value: 'false', label: 'No' }
+      ]
+    }
+  ];
+
+  const resultAvailableFilters = [
+    {
+      key: 'grade',
+      label: 'Grade',
+      type: 'select',
+      options: [
+        { value: 'A', label: 'A (90%+)' },
+        { value: 'B', label: 'B (80%+)' },
+        { value: 'C', label: 'C (70%+)' },
+        { value: 'D', label: 'D (60%+)' },
+        { value: 'F', label: 'F (<60%)' }
+      ]
+    },
+    {
+      key: 'score_min',
+      label: 'Min Score',
+      type: 'number'
+    },
+    {
+      key: 'score_max',
+      label: 'Max Score',
+      type: 'number'
+    }
+  ];
+
   const groupColumns = useMemo(() => ([
     {
       key: 'name',
       title: 'Group',
+      sortable: true,
       render: (val, row) => (
-        <div className="flex items-center gap-3">
-          <div className="font-medium text-gray-900">{row.name}</div>
-          {row.has_math && (<span className="text-xs px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700">Math</span>)}
+        <div className="flex items-center">
+          <div className="flex-shrink-0 h-10 w-10">
+            <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+              <BarChart3 className="h-5 w-5 text-indigo-600" />
+            </div>
+          </div>
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">{row.name}</div>
+            <div className="text-sm text-gray-500">
+              {row.has_math && <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700">Math</span>}
+            </div>
+          </div>
         </div>
       )
     },
     {
       key: 'upload_count',
       title: 'Uploads',
+      sortable: true,
+      render: (value) => (
+        <span className="text-sm text-gray-900">{value || 0}</span>
+      )
     },
     {
       key: 'scheme_count',
       title: 'Schemes',
+      sortable: true,
+      render: (value) => (
+        <span className="text-sm text-gray-900">{value || 0}</span>
+      )
     },
     {
       key: 'actions',
@@ -250,46 +344,35 @@ export default function ResultsPage() {
         )}
 
         {!inGroupMode ? (
-          <>
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Search Groups</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Search by group name..."
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={() => { setSearchTerm(''); }}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-
-            <DataTable
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <EnhancedDataTable
               data={groups}
               columns={groupColumns}
               loading={loading}
               pagination={groupsPagination}
-              onPageChange={(page) => setGroupsPagination(prev => ({ ...prev, page }))}
+              onPageChange={handlePageChange}
+              onSort={handleSort}
+              onSearch={handleSearch}
+              onFilter={handleFilter}
+              sortField={sortField}
+              sortDirection={sortDirection}
+              searchTerm={searchTerm}
+              filters={filters}
+              availableFilters={groupAvailableFilters}
+              title="Results by Group"
+              subtitle="Select a group to view detailed results"
+              showSearch={true}
+              showFilters={true}
+              showPagination={true}
+              showPerPageSelector={true}
+              emptyStateIcon="📊"
+              emptyStateMessage="No groups with results found. Upload and mark some scripts first."
             />
-          </>
+          </motion.div>
         ) : (
           <>
             <motion.div
@@ -305,58 +388,34 @@ export default function ResultsPage() {
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6"
+              transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Search Candidates</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Search by index number..."
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Grade</label>
-                  <select
-                    value={gradeFilter}
-                    onChange={(e) => { setGradeFilter(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  >
-                    <option value="all">All</option>
-                    <option value="A">A (90%+)</option>
-                    <option value="B">B (80%+)</option>
-                    <option value="C">C (70%+)</option>
-                    <option value="D">D (60%+)</option>
-                    <option value="F">F (&lt;60%)</option>
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={() => { setSearchTerm(''); setGradeFilter('all'); }}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
+              <EnhancedDataTable
+                data={results}
+                columns={resultColumns}
+                loading={loading}
+                pagination={pagination}
+                onPageChange={handlePageChange}
+                onSort={handleSort}
+                onSearch={handleSearch}
+                onFilter={handleFilter}
+                sortField={sortField}
+                sortDirection={sortDirection}
+                searchTerm={searchTerm}
+                filters={{ ...filters, grade: gradeFilter !== 'all' ? gradeFilter : undefined }}
+                availableFilters={resultAvailableFilters}
+                title={`Results - ${group?.name || ''}`}
+                subtitle="Candidate performance and detailed scores"
+                showSearch={true}
+                showFilters={true}
+                showPagination={true}
+                showPerPageSelector={true}
+                emptyStateIcon="📝"
+                emptyStateMessage="No results found for this group. Mark some scripts to see results here."
+              />
             </motion.div>
-
-            <DataTable
-              data={results}
-              columns={resultColumns}
-              loading={loading}
-              pagination={pagination}
-              onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
-            />
           </>
         )}
       </div>

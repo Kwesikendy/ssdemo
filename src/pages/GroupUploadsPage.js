@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Upload, UploadCloud, Loader2, CheckCircle2, RefreshCw } from 'lucide-react';
-import DataTable from '../components/DataTable';
+import EnhancedDataTable from '../components/EnhancedDataTable';
 import LoadingOverlay from '../components/LoadingOverlay';
 import LoadingSpinner from '../components/LoadingSpinner';
 import LoadingProgressBar from '../components/LoadingProgressBar';
@@ -29,6 +29,9 @@ export default function GroupUploadsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({});
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -37,7 +40,7 @@ export default function GroupUploadsPage() {
 
   useEffect(() => {
     fetchCandidates();
-  }, [groupId, pagination.page, pagination.per_page]);
+  }, [groupId, pagination.page, pagination.per_page, searchTerm, filters, sortField, sortDirection]);
 
   useEffect(() => {
     // Poll while there are candidates being processed
@@ -69,17 +72,17 @@ export default function GroupUploadsPage() {
       } else {
         setRefreshing(true);
       }
-      const params = { page: pagination.page, per_page: pagination.per_page };
+      const params = { 
+        page: pagination.page, 
+        per_page: pagination.per_page,
+        search: searchTerm,
+        sort_by: sortField,
+        sort_order: sortDirection,
+        ...filters
+      };
       const res = await api.get(`/groups/${groupId}/candidates`, { params });
       const body = res.data;
       let rows = body.data?.candidates || body.candidates || [];
-      if (searchTerm) {
-        const q = searchTerm.toLowerCase();
-        rows = rows.filter(c => (
-          (c.index_number || '').toLowerCase().includes(q) ||
-          (c.page_count || 0).toString().includes(q)
-        ));
-      }
       const meta = body.data?.pagination || body.pagination || null;
       if (meta) {
         const total = rows.length;
@@ -128,6 +131,49 @@ export default function GroupUploadsPage() {
     setIsSubmitting(false);
     setUploadProgress(0);
   };
+
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleSort = (field, direction) => {
+    setSortField(field);
+    setSortDirection(direction);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleFilter = (newFilters) => {
+    setFilters(newFilters);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (page, perPage = pagination.per_page) => {
+    setPagination(prev => ({ ...prev, page, per_page: perPage }));
+  };
+
+  const availableFilters = [
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: [
+        { value: 'processing', label: 'Processing' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'failed', label: 'Failed' }
+      ]
+    },
+    {
+      key: 'page_count_min',
+      label: 'Min Pages',
+      type: 'number'
+    },
+    {
+      key: 'page_count_max',
+      label: 'Max Pages',
+      type: 'number'
+    }
+  ];
 
   const handleSubmitUpload = async (e) => {
     e.preventDefault();
@@ -195,6 +241,7 @@ export default function GroupUploadsPage() {
     {
       key: 'index_number',
       title: 'Candidate',
+      sortable: true,
       render: (value, row) => (
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10">
@@ -219,6 +266,7 @@ export default function GroupUploadsPage() {
     { 
       key: 'page_count', 
       title: 'Pages', 
+      sortable: true,
       render: (value, row) => (
         <div className="text-center">
           <div className="text-lg font-semibold text-gray-900">{value || 0}</div>
@@ -231,6 +279,7 @@ export default function GroupUploadsPage() {
     { 
       key: 'status', 
       title: 'Status', 
+      sortable: true,
       render: (v, row) => {
         const isComplete = row.page_count > 0 && row.bound_pages === row.page_count;
         const isProcessing = row.page_count === 0 || row.bound_pages < row.page_count;
@@ -248,7 +297,7 @@ export default function GroupUploadsPage() {
         );
       }
     },
-    { key: 'created_at', title: 'Created', render: (v) => <span>{formatDate(v)}</span> },
+    { key: 'created_at', title: 'Created', sortable: true, render: (v) => <span>{formatDate(v)}</span> },
     {
       key: 'actions',
       title: 'Actions',
@@ -301,22 +350,34 @@ export default function GroupUploadsPage() {
         )}
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="mb-4 flex flex-wrap gap-3 items-end">
-            <div className="flex-1 min-w-[220px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Search candidates</label>
-              <input value={searchTerm} onChange={(e)=>{ setSearchTerm(e.target.value); setPagination(p=>({ ...p, page: 1 })); }} placeholder="Search by index number or page count..." className="w-full border rounded-md px-3 py-2 text-sm" />
-            </div>
-          </div>
-          <DataTable
+          <EnhancedDataTable
             data={candidates}
             columns={columns}
             loading={loading}
             pagination={pagination}
-            onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+            onPageChange={handlePageChange}
+            onSort={handleSort}
+            onSearch={handleSearch}
+            onFilter={handleFilter}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            searchTerm={searchTerm}
+            filters={filters}
+            availableFilters={availableFilters}
+            title="Group Candidates"
+            subtitle={`${candidates.length} candidates in this group`}
+            showSearch={true}
+            showFilters={true}
+            showPagination={true}
+            showPerPageSelector={true}
+            emptyStateIcon="👥"
+            emptyStateMessage="No candidates found. Upload some scripts to get started."
+            onRefresh={fetchCandidates}
+            refreshLoading={refreshing}
           />
         </div>
 
-  <Modal isOpen={isUploadOpen} onClose={handleCloseUpload} title="Upload images to this group" size="md">
+        <Modal isOpen={isUploadOpen} onClose={handleCloseUpload} title="Upload images to this group" size="md">
           <form onSubmit={handleSubmitUpload} className="space-y-4">
             {/* Mode is always 'images' - PDF support removed */}
             <div>

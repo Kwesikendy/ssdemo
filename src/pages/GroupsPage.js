@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Search, FileText, Users, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import DataTable from '../components/DataTable';
+import EnhancedDataTable from '../components/EnhancedDataTable';
 import StatsCard from '../components/StatsCard';
 import LoadingOverlay from '../components/LoadingOverlay';
 import Alert from '../components/Alert';
@@ -18,6 +18,9 @@ export default function GroupsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({});
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
   const [deleteModal, setDeleteModal] = useState({ open: false, group: null });
   const [formModal, setFormModal] = useState({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false });
   const [pagination, setPagination] = useState({
@@ -30,7 +33,7 @@ export default function GroupsPage() {
   useEffect(() => {
     fetchGroups();
     fetchStats();
-  }, [pagination.page, pagination.per_page, searchTerm]);
+  }, [pagination.page, pagination.per_page, searchTerm, filters, sortField, sortDirection]);
 
   const fetchGroups = async () => {
     try {
@@ -38,7 +41,10 @@ export default function GroupsPage() {
       const params = {
         page: pagination.page,
         per_page: pagination.per_page,
-        search: searchTerm
+        search: searchTerm,
+        sort_by: sortField,
+        sort_order: sortDirection,
+        ...filters
       };
 
       const response = await api.get('/groups', { params });
@@ -126,6 +132,48 @@ export default function GroupsPage() {
       day: 'numeric'
     });
   };
+
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleSort = (field, direction) => {
+    setSortField(field);
+    setSortDirection(direction);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleFilter = (newFilters) => {
+    setFilters(newFilters);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (page, perPage = pagination.per_page) => {
+    setPagination(prev => ({ ...prev, page, per_page: perPage }));
+  };
+
+  const availableFilters = [
+    {
+      key: 'has_math',
+      label: 'Has Math',
+      type: 'select',
+      options: [
+        { value: 'true', label: 'Yes' },
+        { value: 'false', label: 'No' }
+      ]
+    },
+    {
+      key: 'created_after',
+      label: 'Created After',
+      type: 'date'
+    },
+    {
+      key: 'created_before',
+      label: 'Created Before',
+      type: 'date'
+    }
+  ];
 
   const columns = [
     {
@@ -286,52 +334,34 @@ export default function GroupsPage() {
           />
         </motion.div>
 
-        {/* Search */}
+        {/* Enhanced Data Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search Groups
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by group name or description..."
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                />
-              </div>
-            </div>
-            <div className="flex items-end">
-              <button
-                onClick={() => setSearchTerm('')}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Clear Search
-              </button>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Data Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <DataTable
+          <EnhancedDataTable
             data={groups}
             columns={columns}
             loading={loading}
             pagination={pagination}
-            onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+            onPageChange={handlePageChange}
+            onSort={handleSort}
+            onSearch={handleSearch}
+            onFilter={handleFilter}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            searchTerm={searchTerm}
+            filters={filters}
+            availableFilters={availableFilters}
+            title="Groups"
+            subtitle="Manage your script groups and marking schemes"
+            showSearch={true}
+            showFilters={true}
+            showPagination={true}
+            showPerPageSelector={true}
+            emptyStateIcon="📁"
+            emptyStateMessage="No groups found. Create your first group to get started."
           />
         </motion.div>
       </div>

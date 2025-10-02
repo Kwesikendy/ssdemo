@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   AlertTriangle, 
@@ -18,6 +18,7 @@ import { toast } from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatusBadge from '../components/StatusBadge';
 import SeverityBadge from '../components/SeverityBadge';
+import EnhancedDataTable from '../components/EnhancedDataTable';
 
 const ExamAnomaliesPage = () => {
   const { examId } = useParams();
@@ -40,6 +41,18 @@ const ExamAnomaliesPage = () => {
     anomalyId: null,
     indexNumber: '',
     pageNumber: ''
+  });
+  
+  // Table state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({});
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    per_page: 10,
+    total: 0,
+    total_pages: 0
   });
   
   // Use refs to avoid infinite loops
@@ -94,6 +107,52 @@ const ExamAnomaliesPage = () => {
       setLoading(false);
     }
   }, [examId]);
+
+  // Table handlers
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleSort = (field, direction) => {
+    setSortField(field);
+    setSortDirection(direction);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleFilter = (newFilters) => {
+    setFilters(newFilters);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (page, perPage = pagination.per_page) => {
+    setPagination(prev => ({ ...prev, page, per_page: perPage }));
+  };
+
+  // Filter anomalies based on search and filters
+  const filterAnomalies = (anomalyList) => {
+    let filtered = [...anomalyList];
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(anomaly => 
+        anomaly.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        anomaly.anomaly_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (anomaly.page_number && anomaly.page_number.toString().includes(searchTerm))
+      );
+    }
+    
+    // Apply other filters
+    if (filters.severity) {
+      filtered = filtered.filter(anomaly => anomaly.severity === filters.severity);
+    }
+    
+    if (filters.status) {
+      filtered = filtered.filter(anomaly => anomaly.status === filters.status);
+    }
+    
+    return filtered;
+  };
 
   useEffect(() => {
     if (examId) {
@@ -346,6 +405,153 @@ const ExamAnomaliesPage = () => {
     }
   };
 
+  // Available filters for the table
+  const availableFilters = [
+    {
+      key: 'severity',
+      label: 'Severity',
+      type: 'select',
+      options: [
+        { value: 'low', label: 'Low' },
+        { value: 'medium', label: 'Medium' },
+        { value: 'high', label: 'High' },
+        { value: 'critical', label: 'Critical' }
+      ]
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: [
+        { value: 'open', label: 'Open' },
+        { value: 'resolved', label: 'Resolved' },
+        { value: 'investigating', label: 'Investigating' },
+        { value: 'ignored', label: 'Ignored' }
+      ]
+    }
+  ];
+
+  // Columns for the EnhancedDataTable
+  const columns = [
+    {
+      key: 'anomaly_type',
+      title: 'Type',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center">
+          {getAnomalyTypeIcon(value)}
+          <span className="ml-2 text-sm font-medium text-gray-900">
+            {value.replace(/_/g, ' ').toUpperCase()}
+          </span>
+        </div>
+      )
+    },
+    {
+      key: 'description',
+      title: 'Description',
+      sortable: true,
+      render: (value) => (
+        <div className="text-sm text-gray-900 max-w-xs truncate">
+          {value}
+        </div>
+      )
+    },
+    {
+      key: 'severity',
+      title: 'Severity',
+      sortable: true,
+      render: (value) => <SeverityBadge severity={value} size="sm" />
+    },
+    {
+      key: 'status',
+      title: 'Status',
+      sortable: true,
+      render: (value) => <StatusBadge status={value} size="sm" />
+    },
+    {
+      key: 'page_number',
+      title: 'Page',
+      sortable: true,
+      render: (value) => (
+        <span className="text-sm text-gray-500">
+          {value ? `Page ${value}` : '-'}
+        </span>
+      )
+    },
+    {
+      key: 'created_at',
+      title: 'Created',
+      sortable: true,
+      render: (value) => (
+        <span className="text-sm text-gray-500">
+          {new Date(value).toLocaleDateString()}
+        </span>
+      )
+    },
+    {
+      key: 'actions',
+      title: 'Actions',
+      render: (value, row) => (
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewAnomaly(row);
+            }}
+            className="text-blue-600 hover:text-blue-900"
+            title="View Details"
+          >
+            <Eye className="h-4 w-4" />
+          </button>
+          {row.status !== 'resolved' && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRetryOCR(row.id);
+                }}
+                disabled={actionLoading[row.id] || ocrProcessing.has(row.id)}
+                className={`disabled:opacity-50 ${
+                  ocrProcessing.has(row.id) 
+                    ? 'text-blue-700' 
+                    : 'text-blue-600 hover:text-blue-900'
+                }`}
+                title={ocrProcessing.has(row.id) ? 'Processing OCR...' : 'Retry OCR'}
+              >
+                {actionLoading[row.id] || ocrProcessing.has(row.id) ? (
+                  <LoadingSpinner size="sm" text="" />
+                ) : (
+                  <RotateCcw className="h-4 w-4" />
+                )}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingAnomaly(row.id);
+                }}
+                className="text-green-600 hover:text-green-900"
+                title="Resolve Manually"
+              >
+                <CheckCircle className="h-4 w-4" />
+              </button>
+            </>
+          )}
+        </div>
+      )
+    }
+  ];
+
+  // Filter and paginate data
+  const filteredData = useMemo(() => {
+    return filterAnomalies(anomalies);
+  }, [anomalies, searchTerm, filters]);
+
+  const paginatedData = useMemo(() => {
+    const start = (pagination.page - 1) * pagination.per_page;
+    const end = start + pagination.per_page;
+    return filteredData.slice(start, end);
+  }, [filteredData, pagination.page, pagination.per_page]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -403,141 +609,35 @@ const ExamAnomaliesPage = () => {
           </div>
         </div>
 
-        {/* Anomalies Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-blue-700">
-                💡 <strong>Tip:</strong> Click on any row to view details and access action buttons
-              </p>
-              {anomalies.length > 0 && (
-                <button
-                  onClick={() => handleViewAnomaly(anomalies[0])}
-                  className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                >
-                  Test Modal (First Anomaly)
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Severity
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Page
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {anomalies.map((anomaly) => (
-                  <tr 
-                    key={anomaly.id} 
-                    className="hover:bg-blue-50 cursor-pointer transition-colors duration-200"
-                    onClick={() => handleViewAnomaly(anomaly)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {getAnomalyTypeIcon(anomaly.anomaly_type)}
-                        <span className="ml-2 text-sm font-medium text-gray-900">
-                          {anomaly.anomaly_type.replace(/_/g, ' ').toUpperCase()}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 max-w-xs truncate">
-                        {anomaly.description}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <SeverityBadge severity={anomaly.severity} size="sm" />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={anomaly.status} size="sm" />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {anomaly.page_number ? `Page ${anomaly.page_number}` : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(anomaly.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewAnomaly(anomaly);
-                          }}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        {anomaly.status !== 'resolved' && (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRetryOCR(anomaly.id);
-                              }}
-                              disabled={actionLoading[anomaly.id] || ocrProcessing.has(anomaly.id)}
-                              className={`disabled:opacity-50 ${
-                                ocrProcessing.has(anomaly.id) 
-                                  ? 'text-blue-700' 
-                                  : 'text-blue-600 hover:text-blue-900'
-                              }`}
-                              title={ocrProcessing.has(anomaly.id) ? 'Processing OCR...' : 'Retry OCR'}
-                            >
-                              {actionLoading[anomaly.id] || ocrProcessing.has(anomaly.id) ? (
-                                <LoadingSpinner size="sm" text="" />
-                              ) : (
-                                <RotateCcw className="h-4 w-4" />
-                              )}
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingAnomaly(anomaly.id);
-                              }}
-                              className="text-green-600 hover:text-green-900"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {anomalies.length === 0 && (
-          <div className="text-center py-12">
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">No Anomalies Found</h2>
-            <p className="text-gray-600">This exam has no anomalies detected.</p>
-          </div>
-        )}
+        {/* Enhanced Data Table */}
+        <EnhancedDataTable
+          data={paginatedData}
+          columns={columns}
+          loading={loading}
+          pagination={{
+            ...pagination,
+            total: filteredData.length,
+            total_pages: Math.ceil(filteredData.length / pagination.per_page)
+          }}
+          onPageChange={handlePageChange}
+          onSort={handleSort}
+          onSearch={handleSearch}
+          onFilter={handleFilter}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          searchTerm={searchTerm}
+          filters={filters}
+          availableFilters={availableFilters}
+          title="Exam Anomalies"
+          subtitle={`${anomalies.length} ${anomalies.length === 1 ? 'anomaly' : 'anomalies'} detected`}
+          showSearch={true}
+          showFilters={true}
+          showPagination={true}
+          showPerPageSelector={true}
+          emptyStateIcon="✅"
+          emptyStateMessage="No anomalies found. This exam has no anomalies detected."
+          onRefresh={fetchAnomalies}
+        />
       </div>
 
       {/* Resolution Modal */}

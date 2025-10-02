@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, Search, Filter, FileText, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, FileText, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import DataTable from '../components/DataTable';
+import EnhancedDataTable from '../components/EnhancedDataTable';
 import StatsCard from '../components/StatsCard';
 import LoadingOverlay from '../components/LoadingOverlay';
 import Alert from '../components/Alert';
@@ -13,13 +13,16 @@ import Select from 'react-select';
 
 export default function SchemesPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { } = useAuth();
   const [schemes, setSchemes] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterGroup, setFilterGroup] = useState('all');
+  const [filterGroup] = useState('all');
+  const [filters, setFilters] = useState({});
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
   const [groups, setGroups] = useState([]);
   const [deleteModal, setDeleteModal] = useState({ open: false, scheme: null });
   const [viewModal, setViewModal] = useState({ open: false, scheme: null });
@@ -35,7 +38,7 @@ export default function SchemesPage() {
     fetchSchemes();
     fetchGroups();
     fetchStats();
-  }, [pagination.page, pagination.per_page, searchTerm, filterGroup]);
+  }, [pagination.page, pagination.per_page, searchTerm, filterGroup, filters, sortField, sortDirection]);
 
   const fetchSchemes = async () => {
     try {
@@ -44,7 +47,10 @@ export default function SchemesPage() {
         page: pagination.page,
         per_page: pagination.per_page,
         search: searchTerm,
-        group_id: filterGroup !== 'all' ? filterGroup : undefined
+        group_id: filterGroup !== 'all' ? filterGroup : undefined,
+        sort_by: sortField,
+        sort_order: sortDirection,
+        ...filters
       };
 
       const response = await api.get('/marking-schemes', { params });
@@ -129,6 +135,57 @@ export default function SchemesPage() {
   const handleCreateScheme = () => {
     navigate('/upload-scheme');
   };
+
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleSort = (field, direction) => {
+    setSortField(field);
+    setSortDirection(direction);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleFilter = (newFilters) => {
+    setFilters(newFilters);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (page, perPage = pagination.per_page) => {
+    setPagination(prev => ({ ...prev, page, per_page: perPage }));
+  };
+
+  const availableFilters = [
+    {
+      key: 'group_id',
+      label: 'Group',
+      type: 'select',
+      options: [
+        { value: 'all', label: 'All Groups' },
+        ...groups.map(group => ({ value: group.id, label: group.name }))
+      ]
+    },
+    {
+      key: 'is_active',
+      label: 'Status',
+      type: 'select',
+      options: [
+        { value: 'true', label: 'Active' },
+        { value: 'false', label: 'Inactive' }
+      ]
+    },
+    {
+      key: 'created_after',
+      label: 'Created After',
+      type: 'date'
+    },
+    {
+      key: 'created_before',
+      label: 'Created Before',
+      type: 'date'
+    }
+  ];
 
   const handleEditScheme = (scheme) => {
     setEditModal({ open: true, scheme: { ...scheme }, saving: false });
@@ -395,76 +452,34 @@ export default function SchemesPage() {
         </motion.div>
 
         {/* Filters and Search */}
+        {/* Enhanced Data Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6"
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search Schemes
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setPagination(prev => ({ ...prev, page: 1 }));
-                  }}
-                  placeholder="Search by scheme name or subject..."
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Filter by Group
-              </label>
-              <div className="relative">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <select
-                  value={filterGroup}
-                  onChange={(e) => { setFilterGroup(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}
-                  className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                >
-                  <option value="all">All Groups</option>
-                  {groups.map(group => (
-                    <option key={group.id} value={group.id}>{group.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="flex items-end">
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilterGroup('all');
-                  setPagination(prev => ({ ...prev, page: 1 }));
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-              >
-                Clear Filters
-              </button>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Data Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <DataTable
+          <EnhancedDataTable
             data={schemes}
             columns={columns}
             loading={loading}
             pagination={pagination}
-            onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+            onPageChange={handlePageChange}
+            onSort={handleSort}
+            onSearch={handleSearch}
+            onFilter={handleFilter}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            searchTerm={searchTerm}
+            filters={{ ...filters, group_id: filterGroup !== 'all' ? filterGroup : undefined }}
+            availableFilters={availableFilters}
+            title="Marking Schemes"
+            subtitle="Create and manage marking schemes for your exams"
+            showSearch={true}
+            showFilters={true}
+            showPagination={true}
+            showPerPageSelector={true}
+            emptyStateIcon="📝"
+            emptyStateMessage="No marking schemes found. Create your first scheme to get started."
           />
         </motion.div>
       </div>

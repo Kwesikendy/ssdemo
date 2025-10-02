@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Users, Eye, RefreshCw } from 'lucide-react';
+import { Users, Eye, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import DataTable from '../components/DataTable';
-import StatsCard, { UploadsStatsCard, CandidatesStatsCard, MarkedStatsCard } from '../components/StatsCard';
+import EnhancedDataTable from '../components/EnhancedDataTable';
 import LoadingOverlay from '../components/LoadingOverlay';
-import StatusBadge from '../components/StatusBadge';
 import Alert from '../components/Alert';
 import { useToast } from '../components/ToastProvider';
 import api from '../api/axios';
 
 export default function UploadsPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { } = useAuth();
   const toast = useToast();
   const [groups, setGroups] = useState([]);
   const [stats, setStats] = useState({});
@@ -21,6 +19,9 @@ export default function UploadsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({});
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
   const [pagination, setPagination] = useState({
     page: 1,
     per_page: 10,
@@ -31,7 +32,7 @@ export default function UploadsPage() {
   useEffect(() => {
     fetchGroups();
     fetchStats();
-  }, [pagination.page, pagination.per_page, searchTerm]);
+  }, [pagination.page, pagination.per_page, searchTerm, filters, sortField, sortDirection]);
 
   const fetchGroups = async (showLoader = true) => {
     try {
@@ -43,7 +44,10 @@ export default function UploadsPage() {
       const params = {
         page: pagination.page,
         per_page: pagination.per_page,
-        search: searchTerm
+        search: searchTerm,
+        sort_by: sortField,
+        sort_order: sortDirection,
+        ...filters
       };
 
       const response = await api.get('/groups', { params });
@@ -102,6 +106,48 @@ export default function UploadsPage() {
       minute: '2-digit'
     });
   };
+
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleSort = (field, direction) => {
+    setSortField(field);
+    setSortDirection(direction);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleFilter = (newFilters) => {
+    setFilters(newFilters);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (page, perPage = pagination.per_page) => {
+    setPagination(prev => ({ ...prev, page, per_page: perPage }));
+  };
+
+  const availableFilters = [
+    {
+      key: 'has_math',
+      label: 'Has Math',
+      type: 'select',
+      options: [
+        { value: 'true', label: 'Yes' },
+        { value: 'false', label: 'No' }
+      ]
+    },
+    {
+      key: 'created_after',
+      label: 'Created After',
+      type: 'date'
+    },
+    {
+      key: 'created_before',
+      label: 'Created Before',
+      type: 'date'
+    }
+  ];
 
   const columns = [
     {
@@ -230,55 +276,36 @@ export default function UploadsPage() {
           />
         </motion.div>
 
-        {/* Search */}
+        {/* Enhanced Data Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search Groups
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by group name or description..."
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                />
-              </div>
-            </div>
-            <div className="flex items-end">
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  toast.info('Search cleared');
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Clear Search
-              </button>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Data Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <DataTable
+          <EnhancedDataTable
             data={groups}
             columns={columns}
             loading={loading}
             pagination={pagination}
-            onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+            onPageChange={handlePageChange}
+            onSort={handleSort}
+            onSearch={handleSearch}
+            onFilter={handleFilter}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            searchTerm={searchTerm}
+            filters={filters}
+            availableFilters={availableFilters}
+            title="Upload Groups"
+            subtitle="View and manage your script upload groups"
+            showSearch={true}
+            showFilters={true}
+            showPagination={true}
+            showPerPageSelector={true}
+            emptyStateIcon="📁"
+            emptyStateMessage="No upload groups found. Upload some scripts to get started."
+            onRefresh={handleRefresh}
+            refreshLoading={refreshing}
           />
         </motion.div>
       </div>

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Play, CheckCircle, Circle, Loader2, Upload, AlertTriangle, RefreshCw, ChevronRight, BarChart3 } from 'lucide-react';
 import LoadingOverlay from '../components/LoadingOverlay';
 import Alert from '../components/Alert';
+import EnhancedDataTable from '../components/EnhancedDataTable';
 import api from '../api/axios';
 import { Link } from 'react-router-dom';
 
@@ -12,6 +13,16 @@ export default function MarkingGroupsPage() {
   const [error, setError] = useState(null);
   const [selected, setSelected] = useState({});
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({});
+  const [sortField, setSortField] = useState('group_name');
+  const [sortDirection, setSortDirection] = useState('asc');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    per_page: 10,
+    total: 0,
+    total_pages: 0
+  });
 
   const selectedIds = useMemo(() => Object.keys(selected).filter(k => selected[k]), [selected]);
 
@@ -27,12 +38,39 @@ export default function MarkingGroupsPage() {
       const res = await api.get('/marking-groups/progress');
       const data = res.data?.groups || res.data?.data?.groups || [];
       setRows(data);
+      
+      // Set pagination info
+      setPagination(prev => ({
+        ...prev,
+        total: data.length,
+        total_pages: Math.ceil(data.length / prev.per_page)
+      }));
     } catch (err) {
       console.error('Failed to load marking groups:', err);
       setError('Failed to load marking groups');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleSort = (field, direction) => {
+    setSortField(field);
+    setSortDirection(direction);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleFilter = (newFilters) => {
+    setFilters(newFilters);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (page, perPage = pagination.per_page) => {
+    setPagination(prev => ({ ...prev, page, per_page: perPage }));
   };
 
   const toggleAll = (checked) => {
@@ -67,6 +105,118 @@ export default function MarkingGroupsPage() {
     return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${map[st] || map.idle}`}>{icon}{st||'idle'}</span>;
   };
 
+  const availableFilters = [
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: [
+        { value: 'idle', label: 'Idle' },
+        { value: 'processing', label: 'Processing' },
+        { value: 'completed', label: 'Completed' }
+      ]
+    },
+    {
+      key: 'uploads_min',
+      label: 'Min Uploads',
+      type: 'number'
+    },
+    {
+      key: 'uploads_max',
+      label: 'Max Uploads',
+      type: 'number'
+    }
+  ];
+
+  const columns = [
+    {
+      key: 'group_name',
+      title: 'Group Name',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center">
+          <div className="flex-shrink-0 h-10 w-10">
+            <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+              <BarChart3 className="h-5 w-5 text-indigo-600" />
+            </div>
+          </div>
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">{value}</div>
+            <div className="text-sm text-gray-500">ID: {row.group_id?.slice(0, 8)}...</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      title: 'Status',
+      sortable: true,
+      render: (value) => statusPill(value)
+    },
+    {
+      key: 'uploads',
+      title: 'Uploads',
+      sortable: true,
+      render: (value) => (
+        <span className="text-sm text-gray-900">{value || 0}</span>
+      )
+    },
+    {
+      key: 'scripts_marked',
+      title: 'Scripts Marked',
+      sortable: true,
+      render: (value, row) => (
+        <div className="text-center">
+          <div className="text-sm font-medium text-gray-900">{value || 0}</div>
+          <div className="text-xs text-gray-500">of {row.scripts_total || 0}</div>
+        </div>
+      )
+    },
+    {
+      key: 'pages_done',
+      title: 'OCR Progress',
+      sortable: true,
+      render: (value, row) => (
+        <div className="text-center">
+          <div className="text-sm font-medium text-gray-900">{value || 0}</div>
+          <div className="text-xs text-gray-500">of {row.pages_total || 0}</div>
+        </div>
+      )
+    },
+    {
+      key: 'actions',
+      title: 'Actions',
+      render: (value, row) => (
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => startGroups([row.group_id])}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+          >
+            <Play className="w-3.5 h-3.5"/> Start
+          </button>
+          <Link
+            to={`/uploads/group/${row.group_id}`}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-white border border-gray-300 hover:bg-gray-50"
+          >
+            <Upload className="w-3.5 h-3.5"/> Uploads <ChevronRight className="w-3 h-3"/>
+          </Link>
+          <Link
+            to={`/anomalies/${row.group_id}`}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-white border border-gray-300 hover:bg-gray-50"
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600"/> Anomalies <ChevronRight className="w-3 h-3"/>
+          </Link>
+          <Link
+            to={`/results/group/${row.group_id}`}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-white border border-gray-300 hover:bg-gray-50"
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-indigo-600"/> Results <ChevronRight className="w-3 h-3"/>
+          </Link>
+        </div>
+      )
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <LoadingOverlay isLoading={loading || bulkBusy} />
@@ -88,46 +238,42 @@ export default function MarkingGroupsPage() {
 
         {error && <Alert type="error" message={error} onClose={() => setError(null)} className="mb-4"/>}
 
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between text-sm">
-            <div className="flex items-center gap-3">
-              <input type="checkbox" onChange={(e)=>toggleAll(e.target.checked)} checked={rows.length>0 && selectedIds.length===rows.length} />
-              <span className="text-gray-600">Select all</span>
-            </div>
-            <div className="text-gray-500">{rows.length} groups</div>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {rows.length === 0 ? (
-              <div className="p-12 text-center text-gray-500">
-                <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                  <Upload className="w-6 h-6 text-gray-400"/>
-                </div>
-                <p>No groups yet</p>
-              </div>
-            ) : rows.map((g, idx) => (
-              <motion.div key={g.group_id || idx} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: idx*0.02 }} className="p-4 sm:p-5">
-                <div className="flex items-center gap-3">
-                  <input type="checkbox" checked={!!selected[g.group_id]} onChange={()=>toggleOne(g.group_id)} />
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium text-gray-900">{g.group_name}</span>
-                      {statusPill(g.status)}
-                      <span className="text-xs text-gray-500">Uploads: {g.uploads}</span>
-                      <span className="text-xs text-gray-500">Scripts: {g.scripts_marked || 0}/{g.scripts_total || 0}</span>
-                      <span className="text-xs text-gray-400">OCR pages: {g.pages_done}/{g.pages_total}</span>
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <button onClick={() => startGroups([g.group_id])} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700"><Play className="w-3.5 h-3.5"/> Start</button>
-                      <Link to={`/uploads/group/${g.group_id}`} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-white border border-gray-300 hover:bg-gray-50"><Upload className="w-3.5 h-3.5"/> Uploads <ChevronRight className="w-3 h-3"/></Link>
-                      <Link to={`/anomalies/${g.group_id}`} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-white border border-gray-300 hover:bg-gray-50"><AlertTriangle className="w-3.5 h-3.5 text-amber-600"/> Anomalies <ChevronRight className="w-3 h-3"/></Link>
-                      <Link to={`/results/group/${g.group_id}`} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-white border border-gray-300 hover:bg-gray-50"><BarChart3 className="w-3.5 h-3.5 text-indigo-600"/> Results <ChevronRight className="w-3 h-3"/></Link>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
+        <EnhancedDataTable
+          data={rows}
+          columns={columns}
+          loading={loading}
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onSort={handleSort}
+          onSearch={handleSearch}
+          onFilter={handleFilter}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          searchTerm={searchTerm}
+          filters={filters}
+          availableFilters={availableFilters}
+          title="Marking Groups"
+          subtitle="Control and monitor marking per group"
+          showSearch={true}
+          showFilters={true}
+          showPagination={true}
+          showPerPageSelector={true}
+          emptyStateIcon="📊"
+          emptyStateMessage="No groups yet. Upload some scripts to get started."
+          onRefresh={fetchData}
+          bulkActions={[
+            {
+              label: 'Start Selected',
+              action: () => startGroups(selectedIds),
+              disabled: selectedIds.length === 0 || bulkBusy,
+              icon: Play,
+              variant: 'primary'
+            }
+          ]}
+          onBulkSelect={toggleAll}
+          onRowSelect={toggleOne}
+          selectedRows={selected}
+        />
       </div>
     </div>
   );
