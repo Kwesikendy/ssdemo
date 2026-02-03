@@ -1,8 +1,9 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import ToastProvider from './components/ToastProvider';
 import ProtectedRoute from './components/ProtectedRoute';
+import DevModeModal from './components/DevModeModal';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import UploadsPage from './pages/UploadsPage';
@@ -24,12 +25,17 @@ import PageDetailPage from './pages/PageDetailPage';
 import CandidatePagesView from './pages/CandidatePagesView';
 import './App.css';
 
-export default function App(){
+import './App.css';
+
+// Inner App component to use useAuth hook
+const AppContent = () => {
+  const { showDevModal, confirmDevMode } = useAuth();
+
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <Routes>
+    <>
+      {showDevModal && <DevModeModal onSelect={confirmDevMode} />}
+      <ToastProvider>
+        <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/" element={<LandingPage />} />
@@ -51,8 +57,17 @@ export default function App(){
           <Route path="/upload-scheme" element={<ProtectedRoute><UploadScheme /></ProtectedRoute>} />
           <Route path="/groups" element={<ProtectedRoute><GroupsPage /></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
-          </Routes>
-        </ToastProvider>
+        </Routes>
+      </ToastProvider>
+    </>
+  );
+};
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppContent />
       </AuthProvider>
     </BrowserRouter>
   );

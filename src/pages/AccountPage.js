@@ -8,8 +8,8 @@ import { AuthContext } from '../context/AuthContext';
 import { useToast } from '../components/ToastProvider';
 import Select from 'react-select';
 
-export default function AccountPage(){
-  const { user, setUser } = useContext(AuthContext);
+export default function AccountPage() {
+  const { user, setUser, devMode } = useContext(AuthContext);
   const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
@@ -26,6 +26,27 @@ export default function AccountPage(){
 
   useEffect(() => {
     const load = async () => {
+      // Mock Data Check
+      if (localStorage.getItem('token') === 'mock-jwt-token') {
+        const savedMode = localStorage.getItem('devMode') || 'standard';
+        setProfile({
+          first_name: 'Dev',
+          last_name: 'User',
+          email: `mock-${savedMode}@smartscript.com`,
+          user_id: 'mock-user-id'
+        });
+        setBilling({
+          plan: savedMode === 'standard' ? 'pro' : 'enterprise',
+          credits: savedMode === 'standard' ? 1000 : 0,
+          on_prem: false
+        });
+        setFirstName('Dev');
+        setLastName('User');
+        setCredits(savedMode === 'standard' ? 1000 : 0);
+        setLoading(false);
+        return;
+      }
+
       try {
         const [p, b] = await Promise.all([
           api.get('/account/profile'),
@@ -35,10 +56,10 @@ export default function AccountPage(){
         setBilling(b.data.data);
         setFirstName(p.data.data.first_name || '');
         setLastName(p.data.data.last_name || '');
-        
+
         // Set credits from billing data
         setCredits(b.data.data.credits || 0);
-      } catch (e){
+      } catch (e) {
         setError(e?.response?.data?.error?.message || 'Failed to load account');
       } finally {
         setLoading(false);
@@ -59,7 +80,7 @@ export default function AccountPage(){
       const successMsg = 'Profile updated successfully';
       setMessage(successMsg);
       toast.success(successMsg);
-    } catch (e){
+    } catch (e) {
       const errorMsg = e?.response?.data?.error?.message || 'Failed to update';
       setError(errorMsg);
       toast.error(errorMsg);
@@ -73,9 +94,9 @@ export default function AccountPage(){
       const response = await api.get('/account/billing');
       setBilling(response.data.data);
       setCredits(response.data.data.credits || 0);
-      
-  // Update user context credits/plan immediately to refresh navbar
-  setUser(prev => prev ? { ...prev, credits: response.data.data.credits || 0, plan: response.data.data.plan } : prev);
+
+      // Update user context credits/plan immediately to refresh navbar
+      setUser(prev => prev ? { ...prev, credits: response.data.data.credits || 0, plan: response.data.data.plan } : prev);
     } catch (e) {
       console.error('Failed to fetch billing data:', e);
     }
@@ -126,7 +147,7 @@ export default function AccountPage(){
     if (!billing) return null;
     const base = 'inline-flex items-center px-2 py-1 rounded text-xs font-medium';
     const color = billing.on_prem ? 'bg-gray-900 text-white' : billing.plan === 'pro' ? 'bg-fuchsia-600 text-white' : 'bg-blue-600 text-white';
-    const label = billing.on_prem ? 'On-Premise' : billing.plan ? billing.plan.charAt(0).toUpperCase()+billing.plan.slice(1) : 'Starter';
+    const label = billing.on_prem ? 'On-Premise' : billing.plan ? billing.plan.charAt(0).toUpperCase() + billing.plan.slice(1) : 'Starter';
     return <span className={`${base} ${color}`}>{label}</span>;
   };
 
@@ -163,12 +184,12 @@ export default function AccountPage(){
       const verifyResponse = await api.post('/account/verify-payment', {
         reference: response.reference
       });
-      
+
       if (verifyResponse.data.success) {
         const creditsAdded = verifyResponse.data.data.credits_added;
         setMessage(`Payment successful! ${creditsAdded} credits have been added to your account.`);
         setShowCreditPackages(false);
-        
+
         // Refresh billing data to get updated credits
         await fetchBillingData();
       } else {
@@ -184,7 +205,7 @@ export default function AccountPage(){
     // Payment popup was closed
   };
 
-  if (loading){
+  if (loading) {
     return <div className="p-8">Loading account…</div>;
   }
 
@@ -199,42 +220,52 @@ export default function AccountPage(){
       {message && <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md text-sm">{message}</div>}
 
       <div className="grid md:grid-cols-3 gap-6">
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">Credits & Usage</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Coins className="w-5 h-5 text-yellow-500" />
-                <span className="text-gray-700">Available Credits</span>
-              </div>
-              <span className="text-2xl font-bold text-gray-900">{credits}</span>
-            </div>
-            
+        {(devMode === 'custom' || billing?.plan === 'enterprise' || billing?.plan === 'custom') ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold mb-4">Organization Usage</h2>
             <div className="text-sm text-gray-600">
-              <p>Credits are used for OCR processing and AI marking.</p>
-              <p className="mt-1">• 1 credit = 1 script (up to 3 pages)</p>
+              <p>Your organization is on a custom plan.</p>
+              <p className="mt-2 text-purple-600 font-medium">Unlimited/Metered Usage</p>
             </div>
-
-            <button 
-              onClick={() => setShowCreditPackages(true)}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 transition"
-            >
-              <CreditCard className="w-4 h-4" />
-              Buy Credits
-            </button>
           </div>
-        </div>
+        ) : (
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold mb-4">Credits & Usage</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Coins className="w-5 h-5 text-yellow-500" />
+                  <span className="text-gray-700">Available Credits</span>
+                </div>
+                <span className="text-2xl font-bold text-gray-900">{credits}</span>
+              </div>
+
+              <div className="text-sm text-gray-600">
+                <p>Credits are used for OCR processing and AI marking.</p>
+                <p className="mt-1">• 1 credit = 1 script (up to 3 pages)</p>
+              </div>
+
+              <button
+                onClick={() => setShowCreditPackages(true)}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 transition"
+              >
+                <CreditCard className="w-4 h-4" />
+                Buy Credits
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">Profile</h2>
           <form onSubmit={saveProfile} className="space-y-3">
             <div>
               <label className="text-sm text-gray-600">First name</label>
-              <input value={firstName} onChange={e=>setFirstName(e.target.value)} className="mt-1 w-full border rounded-md p-2" />
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} className="mt-1 w-full border rounded-md p-2" />
             </div>
             <div>
               <label className="text-sm text-gray-600">Last name</label>
-              <input value={lastName} onChange={e=>setLastName(e.target.value)} className="mt-1 w-full border rounded-md p-2" />
+              <input value={lastName} onChange={e => setLastName(e.target.value)} className="mt-1 w-full border rounded-md p-2" />
             </div>
             <div>
               <label className="text-sm text-gray-600">Email</label>
@@ -293,7 +324,7 @@ export default function AccountPage(){
                   )}
                 </div>
               )}
-              {!billing.on_prem && (
+              {!billing.on_prem && billing.plan !== 'custom' && billing.plan !== 'enterprise' && devMode !== 'custom' && (
                 <div className="pt-2">
                   <Link to="/pricing" className="inline-flex items-center justify-center px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50">View plans</Link>
                 </div>
@@ -312,7 +343,7 @@ export default function AccountPage(){
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold">Buy Credits</h3>
-                <button 
+                <button
                   onClick={() => setShowCreditPackages(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -321,7 +352,7 @@ export default function AccountPage(){
               </div>
               <p className="text-gray-600 mt-2">Choose a credit package to continue using SmartScript for OCR and AI marking.</p>
             </div>
-            
+
             <div className="p-6">
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {creditPackages.map((pkg, index) => (
@@ -331,14 +362,14 @@ export default function AccountPage(){
                         <span className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">Popular</span>
                       </div>
                     )}
-                    
+
                     <div className="text-center">
                       <div className="text-2xl font-bold text-gray-900">{pkg.credits}</div>
                       <div className="text-sm text-gray-600">Credits</div>
                       <div className="mt-2 text-lg font-semibold text-green-600">₵{pkg.price}</div>
                       <div className="text-xs text-gray-500">₵{pkg.unit.toFixed(2)} per credit</div>
                     </div>
-                    
+
                     <PaystackPayment
                       amount={pkg.price}
                       credits={pkg.credits}
@@ -358,7 +389,7 @@ export default function AccountPage(){
                   </div>
                 ))}
               </div>
-              
+
               <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                 <div className="flex items-start gap-2">
                   <div className="text-blue-600 mt-0.5">ℹ️</div>

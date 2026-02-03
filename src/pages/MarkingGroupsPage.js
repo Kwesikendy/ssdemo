@@ -34,11 +34,46 @@ export default function MarkingGroupsPage() {
     try {
       setLoading(true);
       setError(null);
+
+      // Mock Data Check
+      if (localStorage.getItem('token') === 'mock-jwt-token') {
+        const mockRows = [
+          {
+            group_id: 'mock-group-1',
+            group_name: 'Mathematics Class 101',
+            status: 'processing',
+            uploads: 5,
+            scripts_total: 150,
+            scripts_marked: 45,
+            pages_total: 450,
+            pages_done: 135
+          },
+          {
+            group_id: 'mock-group-2',
+            group_name: 'Physics Lab Reports',
+            status: 'idle',
+            uploads: 12,
+            scripts_total: 300,
+            scripts_marked: 0,
+            pages_total: 1200,
+            pages_done: 0
+          }
+        ];
+        setRows(mockRows);
+        setPagination(prev => ({
+          ...prev,
+          total: mockRows.length,
+          total_pages: 1
+        }));
+        setLoading(false);
+        return;
+      }
+
       // backend route: GET /marking-groups/progress
       const res = await api.get('/marking-groups/progress');
       const data = res.data?.groups || res.data?.data?.groups || [];
       setRows(data);
-      
+
       // Set pagination info
       setPagination(prev => ({
         ...prev,
@@ -101,8 +136,8 @@ export default function MarkingGroupsPage() {
       processing: 'bg-blue-100 text-blue-700',
       completed: 'bg-green-100 text-green-700',
     };
-    const icon = st === 'completed' ? <CheckCircle className="w-4 h-4 mr-1"/> : st === 'processing' ? <Loader2 className="w-4 h-4 mr-1 animate-spin"/> : <Circle className="w-4 h-4 mr-1"/>;
-    return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${map[st] || map.idle}`}>{icon}{st||'idle'}</span>;
+    const icon = st === 'completed' ? <CheckCircle className="w-4 h-4 mr-1" /> : st === 'processing' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Circle className="w-4 h-4 mr-1" />;
+    return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${map[st] || map.idle}`}>{icon}{st || 'idle'}</span>;
   };
 
   const availableFilters = [
@@ -192,25 +227,25 @@ export default function MarkingGroupsPage() {
             onClick={() => startGroups([row.group_id])}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
           >
-            <Play className="w-3.5 h-3.5"/> Start
+            <Play className="w-3.5 h-3.5" /> Start
           </button>
           <Link
             to={`/uploads/group/${row.group_id}`}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-white border border-gray-300 hover:bg-gray-50"
           >
-            <Upload className="w-3.5 h-3.5"/> Uploads <ChevronRight className="w-3 h-3"/>
+            <Upload className="w-3.5 h-3.5" /> Uploads <ChevronRight className="w-3 h-3" />
           </Link>
           <Link
             to={`/anomalies/${row.group_id}`}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-white border border-gray-300 hover:bg-gray-50"
           >
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-600"/> Anomalies <ChevronRight className="w-3 h-3"/>
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Anomalies <ChevronRight className="w-3 h-3" />
           </Link>
           <Link
             to={`/results/group/${row.group_id}`}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-white border border-gray-300 hover:bg-gray-50"
           >
-            <BarChart3 className="w-3.5 h-3.5 text-indigo-600"/> Results <ChevronRight className="w-3 h-3"/>
+            <BarChart3 className="w-3.5 h-3.5 text-indigo-600" /> Results <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
       )
@@ -228,15 +263,15 @@ export default function MarkingGroupsPage() {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={fetchData} className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-white border border-gray-300 hover:bg-gray-50">
-              <RefreshCw className="w-4 h-4"/> Refresh
+              <RefreshCw className="w-4 h-4" /> Refresh
             </button>
-            <button disabled={selectedIds.length===0 || bulkBusy} onClick={() => startGroups(selectedIds)} className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
-              <Play className="w-4 h-4"/> Start Selected ({selectedIds.length})
+            <button disabled={selectedIds.length === 0 || bulkBusy} onClick={() => startGroups(selectedIds)} className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
+              <Play className="w-4 h-4" /> Start Selected ({selectedIds.length})
             </button>
           </div>
         </div>
 
-        {error && <Alert type="error" message={error} onClose={() => setError(null)} className="mb-4"/>}
+        {error && <Alert type="error" message={error} onClose={() => setError(null)} className="mb-4" />}
 
         <EnhancedDataTable
           data={rows}

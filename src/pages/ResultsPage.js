@@ -47,6 +47,31 @@ export default function ResultsPage() {
   const loadGroups = async () => {
     try {
       setLoading(true);
+
+      // Mock Data Check
+      if (localStorage.getItem('token') === 'mock-jwt-token') {
+        const mockGroups = [
+          {
+            id: 'mock-group-1',
+            name: 'Mathematics Class 101',
+            has_math: true,
+            upload_count: 5,
+            scheme_count: 1
+          },
+          {
+            id: 'mock-group-2',
+            name: 'Physics Lab Reports',
+            has_math: false,
+            upload_count: 12,
+            scheme_count: 0
+          }
+        ];
+        setGroups(mockGroups);
+        setGroupsPagination(prev => ({ ...prev, total: 2, total_pages: 1 }));
+        setLoading(false);
+        return;
+      }
+
       const res = await api.get('/results/groups', { params: { search: searchTerm } });
       const list = res.data?.groups || [];
       const total = res.data?.total || list.length;
@@ -75,6 +100,41 @@ export default function ResultsPage() {
   const loadGroupResults = async () => {
     try {
       setLoading(true);
+
+      // Mock Data Check
+      if (localStorage.getItem('token') === 'mock-jwt-token') {
+        const mockResults = Array.from({ length: 15 }).map((_, i) => ({
+          candidate_id: `mock-cand-${i}`,
+          index_number: `IDX-${2023000 + i}`,
+          total_awarded: 75 + (i % 25),
+          total_max: 100,
+          percentage: 75 + (i % 25),
+          updated_at_unix: Math.floor(Date.now() / 1000) - (i * 3600)
+        }));
+
+        const rows = mockResults.map(r => ({
+          ...r,
+          __grade: r.percentage >= 90 ? 'A' : r.percentage >= 80 ? 'B' : r.percentage >= 70 ? 'C' : r.percentage >= 60 ? 'D' : 'F'
+        }));
+        const filtered = gradeFilter === 'all' ? rows : rows.filter(r => r.__grade === gradeFilter);
+        setResults(filtered);
+        setPagination({
+          page: 1,
+          per_page: 10,
+          total: filtered.length,
+          total_pages: Math.ceil(filtered.length / 10)
+        });
+        setStats({
+          average_score: 82,
+          pass_rate: 95,
+          highest_score: 98,
+          completed_candidates: 15,
+          total_candidates: 15
+        });
+        setLoading(false);
+        return;
+      }
+
       const res = await api.get(`/results/groups/${groupId}/results`, {
         params: { page: pagination.page, per_page: pagination.per_page, search: searchTerm }
       });

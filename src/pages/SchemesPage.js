@@ -43,6 +43,37 @@ export default function SchemesPage() {
   const fetchSchemes = async () => {
     try {
       setLoading(true);
+
+      // Mock Data Check
+      if (localStorage.getItem('token') === 'mock-jwt-token') {
+        const mockSchemes = [
+          {
+            id: 'mock-scheme-1',
+            name: 'Math Midterm Scheme',
+            subject: 'Mathematics',
+            groups: [{ id: 'mock-group-1', name: 'Mathematics Class 101' }],
+            is_active: true,
+            created_at: new Date().toISOString(),
+            questions: Array.from({ length: 10 }).map((_, i) => ({ id: i, marks: 10 }))
+          },
+          {
+            id: 'mock-scheme-2',
+            name: 'Physics Lab Rubric',
+            subject: 'Physics',
+            groups: [{ id: 'mock-group-2', name: 'Physics Lab Reports' }],
+            is_active: true,
+            created_at: new Date(Date.now() - 86400000).toISOString(),
+            questions: Array.from({ length: 5 }).map((_, i) => ({ id: i, marks: 20 }))
+          }
+        ];
+        setSchemes(mockSchemes);
+        setPagination({ page: 1, per_page: 10, total: 2, total_pages: 1 });
+        setLoading(false);
+        // Mock stats update
+        setStats({ total_schemes: 2, active_schemes: 2, total_questions: 20 });
+        return;
+      }
+
       const params = {
         page: pagination.page,
         per_page: pagination.per_page,
@@ -54,11 +85,11 @@ export default function SchemesPage() {
       };
 
       const response = await api.get('/marking-schemes', { params });
-      
+
       // Handle different response formats
       let schemesData = [];
       let paginationData = pagination;
-      
+
       if (response.data.schemes) {
         schemesData = response.data.schemes;
         paginationData = response.data.pagination || pagination;
@@ -75,7 +106,7 @@ export default function SchemesPage() {
           };
         }
       }
-      
+
       setSchemes(schemesData);
       // Update stats from the fetched list
       try {
@@ -108,6 +139,15 @@ export default function SchemesPage() {
   };
 
   const fetchGroups = async () => {
+    // Mock Data Check
+    if (localStorage.getItem('token') === 'mock-jwt-token') {
+      setGroups([
+        { id: 'mock-group-1', name: 'Mathematics Class 101' },
+        { id: 'mock-group-2', name: 'Physics Lab Reports' }
+      ]);
+      return;
+    }
+
     try {
       const response = await api.get('/groups', { params: { per_page: 100 } });
       setGroups(response.data.groups || []);
@@ -117,6 +157,12 @@ export default function SchemesPage() {
   };
 
   const fetchStats = async () => {
+    // Mock Data Check
+    if (localStorage.getItem('token') === 'mock-jwt-token') {
+      // already set in fetchSchemes mock path or valid defaults
+      return;
+    }
+
     try {
       // Try to fetch stats, but don't fail if endpoint doesn't exist
       const response = await api.get('/marking-schemes/stats');
@@ -234,7 +280,7 @@ export default function SchemesPage() {
       const response = await api.get(`/marking-schemes/${scheme.id}/download`, {
         responseType: 'blob'
       });
-      
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -379,7 +425,7 @@ export default function SchemesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <LoadingOverlay isLoading={loading && schemes.length === 0} />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="md:flex md:items-center md:justify-between mb-8">

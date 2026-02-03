@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  AlertTriangle, 
-  RefreshCw, 
-  CheckCircle, 
-  Eye, 
+import {
+  AlertTriangle,
+  RefreshCw,
+  CheckCircle,
+  Eye,
   Clock,
   Users,
   FileText
@@ -40,6 +40,27 @@ const AnomaliesPage = () => {
   const fetchAnomalyGroups = async () => {
     try {
       setLoading(true);
+
+      // Mock Data Check
+      if (localStorage.getItem('token') === 'mock-jwt-token') {
+        const mockGroups = [
+          {
+            exam_id: 'mock-exam-1',
+            exam_name: 'Mathematics Class 101',
+            anomaly_count: 2,
+            created_at: new Date().toISOString(),
+            anomalies: [
+              { severity: 'medium', status: 'open' },
+              { severity: 'low', status: 'resolved' }
+            ]
+          }
+        ];
+        setAnomalyGroups(mockGroups);
+        setPagination(prev => ({ ...prev, total: 1, total_pages: 1 }));
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/v1/anomalies/groups', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -54,16 +75,16 @@ const AnomaliesPage = () => {
       const data = await response.json();
       const groups = data.data || [];
       setAnomalyGroups(groups);
-      
+
       // Update pagination with filtered data
       const filtered = groups.filter(group => {
         if (searchTerm) {
           return group.exam_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                 group.exam_id.toLowerCase().includes(searchTerm.toLowerCase());
+            group.exam_id.toLowerCase().includes(searchTerm.toLowerCase());
         }
         return true;
       });
-      
+
       setPagination(prev => ({
         ...prev,
         total: filtered.length,
@@ -168,8 +189,8 @@ const AnomaliesPage = () => {
       render: (value, row) => {
         const severities = row.anomalies?.map(a => a.severity) || [];
         const highestSeverity = severities.includes('critical') ? 'critical' :
-                               severities.includes('high') ? 'high' :
-                               severities.includes('medium') ? 'medium' : 'low';
+          severities.includes('high') ? 'high' :
+            severities.includes('medium') ? 'medium' : 'low';
         return <SeverityBadge severity={highestSeverity} size="sm" />;
       }
     },
@@ -216,28 +237,28 @@ const AnomaliesPage = () => {
   // Filter and paginate data
   const filteredData = useMemo(() => {
     let filtered = [...anomalyGroups];
-    
+
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(group => 
+      filtered = filtered.filter(group =>
         group.exam_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         group.exam_id.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     // Apply other filters
     if (filters.severity) {
-      filtered = filtered.filter(group => 
+      filtered = filtered.filter(group =>
         group.anomalies?.some(a => a.severity === filters.severity)
       );
     }
-    
+
     if (filters.status) {
-      filtered = filtered.filter(group => 
+      filtered = filtered.filter(group =>
         group.anomalies?.some(a => a.status === filters.status)
       );
     }
-    
+
     return filtered;
   }, [anomalyGroups, searchTerm, filters]);
 
@@ -273,7 +294,7 @@ const AnomaliesPage = () => {
   }
 
   const totalAnomalies = anomalyGroups.reduce((sum, group) => sum + (group.anomaly_count || 0), 0);
-  const openAnomalies = anomalyGroups.reduce((sum, group) => 
+  const openAnomalies = anomalyGroups.reduce((sum, group) =>
     sum + (group.anomalies?.filter(a => a.status === 'open').length || 0), 0
   );
 

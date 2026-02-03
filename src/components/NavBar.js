@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { 
+import {
   Home,
   Upload,
   AlertTriangle,
@@ -14,10 +14,10 @@ import {
   Bell,
   User as UserIcon,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
-export default function NavBar(){
-  const { logout } = useContext(AuthContext);
-  const { user } = useContext(AuthContext);
+export default function NavBar() {
+  const { logout, user, devMode } = useAuth();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -100,11 +100,10 @@ export default function NavBar(){
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 relative ${
-                      isActive(item.href)
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 relative ${isActive(item.href)
                         ? 'bg-indigo-100 text-indigo-700 shadow-sm'
                         : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <Icon className="w-4 h-4" />
                     <span>{item.name}</span>
@@ -131,7 +130,13 @@ export default function NavBar(){
               <div className="flex items-center space-x-3">
                 <div className="text-sm text-gray-700">
                   <div className="font-medium">{user ? `${user.first_name} ${user.last_name}` : 'User'}</div>
-                  <div className="text-xs text-gray-500">Credits: {user && user.credits ? user.credits : 0}</div>
+                  {/* Hide credits if devMode is custom or user plan indicates organization/enterprise */}
+                  {user && (devMode !== 'custom' && user.plan !== 'enterprise' && user.plan !== 'custom') && (
+                    <div className="text-xs text-gray-500">Credits: {user.credits || 0}</div>
+                  )}
+                  {user && (devMode === 'custom' || user.plan === 'enterprise' || user.plan === 'custom') && (
+                    <div className="text-xs text-xs text-purple-600 font-medium">Organization</div>
+                  )}
                 </div>
                 <div className="relative">
                   <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="p-2 rounded-full bg-gray-100 hover:bg-gray-200">
@@ -175,11 +180,10 @@ export default function NavBar(){
                   key={item.name}
                   to={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`block px-3 py-2 rounded-md text-base font-medium transition-all duration-200 flex items-center space-x-3 relative ${
-                    isActive(item.href)
+                  className={`block px-3 py-2 rounded-md text-base font-medium transition-all duration-200 flex items-center space-x-3 relative ${isActive(item.href)
                       ? 'bg-indigo-100 text-indigo-700'
                       : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.name}</span>

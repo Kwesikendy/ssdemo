@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Upload, 
-  FileText, 
+import {
+  Upload,
+  FileText,
   Users,
   CheckSquare
 } from 'lucide-react';
@@ -76,6 +76,35 @@ export default function Dashboard() {
   }, []);
 
   const fetchDashboardStats = async () => {
+    // Check for mock token and return dummy data
+    if (localStorage.getItem('token') === 'mock-jwt-token') {
+      setStats({
+        uploads: 12,
+        candidates: 156,
+        marking_schemes: 3,
+        recent_uploads: [
+          {
+            id: 'mock-1',
+            filename: 'Physics_Paper_1.pdf',
+            group_name: 'Class 12A',
+            candidate_count: 32,
+            status: 'completed',
+            created_at: new Date().toISOString()
+          },
+          {
+            id: 'mock-2',
+            filename: 'Math_Quiz.pdf',
+            group_name: 'Class 10B',
+            candidate_count: 28,
+            status: 'processing',
+            created_at: new Date(Date.now() - 3600000).toISOString()
+          }
+        ]
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await api.get('/dashboard/stats');
       // API sometimes returns { success: true, data: {...} } or raw object
@@ -101,7 +130,7 @@ export default function Dashboard() {
       <LoadingOverlay isLoading={loading} />
 
       {/* Page Header */}
-  <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px] pt-4 pb-2">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px] pt-4 pb-2">
         <div className="flex items-center justify-between">
           <h1 className="text-xl md:text-2xl font-semibold text-gray-900">Overview</h1>
         </div>
@@ -109,7 +138,7 @@ export default function Dashboard() {
 
       {/* Error Alert */}
       {error && (
-  <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px]">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px]">
           <Alert
             type="error"
             message={error}
@@ -120,7 +149,7 @@ export default function Dashboard() {
       )}
 
       {/* Quick Actions Toolbar */}
-  <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px] mt-2">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px] mt-2">
         <div className="bg-white/80 backdrop-blur-sm border border-gray-100 shadow-sm rounded-2xl p-4 md:p-6">
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4">
             <button
@@ -155,18 +184,18 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Section */}
-  <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px] py-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px] py-12">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
           className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
         >
-          <UploadsStatsCard 
+          <UploadsStatsCard
             uploads={stats.uploads || 0}
             change={undefined}
           />
-          <CandidatesStatsCard 
+          <CandidatesStatsCard
             candidates={stats.candidates || 0}
             change={undefined}
           />
@@ -226,7 +255,7 @@ export default function Dashboard() {
 
       {/* Recent Activity Section */}
       {stats.recent_uploads && stats.recent_uploads.length > 0 && (
-  <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px] py-12">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px] py-12">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -248,11 +277,10 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          upload.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                          upload.status === 'processing' ? 'bg-blue-100 text-blue-800' : 
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${upload.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            upload.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                              'bg-yellow-100 text-yellow-800'
+                          }`}>
                           {upload.status}
                         </span>
                         <p className="text-sm text-gray-500 mt-1">
@@ -276,7 +304,7 @@ export default function Dashboard() {
         </div>
       )}
 
-  {/* Removed non-dashboard CTA section */}
+      {/* Removed non-dashboard CTA section */}
     </div>
   );
 }

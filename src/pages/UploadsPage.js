@@ -7,6 +7,8 @@ import EnhancedDataTable from '../components/EnhancedDataTable';
 import LoadingOverlay from '../components/LoadingOverlay';
 import Alert from '../components/Alert';
 import { useToast } from '../components/ToastProvider';
+
+import { UploadsStatsCard, CandidatesStatsCard, MarkedStatsCard } from '../components/StatsCard';
 import api from '../api/axios';
 
 export default function UploadsPage() {
@@ -41,6 +43,26 @@ export default function UploadsPage() {
       } else {
         setRefreshing(true);
       }
+
+      // Mock Data Check
+      if (localStorage.getItem('token') === 'mock-jwt-token') {
+        setGroups([
+          {
+            id: 'mock-group-1',
+            name: 'Mathematics Class 101',
+            description: 'Mid-term examination scripts',
+            has_math: true,
+            upload_count: 5,
+            created_at: new Date().toISOString()
+          }
+        ]);
+        setPagination({ page: 1, per_page: 10, total: 1, total_pages: 1 });
+        setError(null);
+        if (showLoader) setLoading(false);
+        else setRefreshing(false);
+        return;
+      }
+
       const params = {
         page: pagination.page,
         per_page: pagination.per_page,
@@ -80,9 +102,9 @@ export default function UploadsPage() {
 
   const fetchStats = async () => {
     try {
-  const response = await api.get('/uploads/stats');
-  const body = response.data;
-  setStats(body.data || body);
+      const response = await api.get('/uploads/stats');
+      const body = response.data;
+      setStats(body.data || body);
     } catch (err) {
       console.error('Fetch stats error:', err);
     }
@@ -181,11 +203,10 @@ export default function UploadsPage() {
       title: 'Has Math',
       sortable: true,
       render: (value) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          value 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-gray-100 text-gray-800'
-        }`}>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${value
+          ? 'bg-green-100 text-green-800'
+          : 'bg-gray-100 text-gray-800'
+          }`}>
           {value ? 'Yes' : 'No'}
         </span>
       )
@@ -217,9 +238,9 @@ export default function UploadsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-  <LoadingOverlay isLoading={loading && groups.length === 0} />
-      
-  <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px] py-8">
+      <LoadingOverlay isLoading={loading && groups.length === 0} />
+
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl 3xl:max-w-7xl 4xl:max-w-[1400px] py-8">
         {/* Header */}
         <div className="md:flex md:items-center md:justify-between mb-8">
           <div className="flex-1 min-w-0">
@@ -228,8 +249,8 @@ export default function UploadsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-        <h1 className="text-3xl font-bold text-gray-900 sm:truncate">Script Uploads</h1>
-        <p className="mt-2 text-gray-600">Select a group to view its uploads and add more scripts</p>
+              <h1 className="text-3xl font-bold text-gray-900 sm:truncate">Script Uploads</h1>
+              <p className="mt-2 text-gray-600">Select a group to view its uploads and add more scripts</p>
             </motion.div>
           </div>
           <div className="mt-4 flex md:mt-0 md:ml-4">
@@ -261,15 +282,15 @@ export default function UploadsPage() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
         >
-          <UploadsStatsCard 
+          <UploadsStatsCard
             uploads={stats.total_uploads || 0}
             change={stats.uploads_change}
           />
-          <CandidatesStatsCard 
+          <CandidatesStatsCard
             candidates={stats.total_candidates || 0}
             change={stats.candidates_change}
           />
-          <MarkedStatsCard 
+          <MarkedStatsCard
             marked={stats.marked_scripts || 0}
             total={stats.total_scripts || 0}
             change={stats.progress_change}

@@ -38,6 +38,34 @@ export default function GroupsPage() {
   const fetchGroups = async () => {
     try {
       setLoading(true);
+
+      // Mock Data Check
+      if (localStorage.getItem('token') === 'mock-jwt-token') {
+        setGroups([
+          {
+            id: 'mock-group-1',
+            name: 'Mathematics Class 101',
+            description: 'Mid-term examination scripts',
+            has_math: true,
+            upload_count: 5,
+            scheme_count: 1,
+            created_at: new Date().toISOString()
+          },
+          {
+            id: 'mock-group-2',
+            name: 'Physics Lab Reports',
+            description: 'Fall semester lab submissions',
+            has_math: false,
+            upload_count: 12,
+            scheme_count: 0,
+            created_at: new Date(Date.now() - 86400000).toISOString()
+          }
+        ]);
+        setPagination({ page: 1, per_page: 10, total: 2, total_pages: 1 });
+        setLoading(false);
+        return;
+      }
+
       const params = {
         page: pagination.page,
         per_page: pagination.per_page,
@@ -69,6 +97,19 @@ export default function GroupsPage() {
 
   const fetchStats = async () => {
     try {
+      // Mock Stats Check
+      if (localStorage.getItem('token') === 'mock-jwt-token') {
+        setStats({
+          total_groups: 2,
+          groups_change: 2,
+          total_uploads: 17,
+          uploads_change: 5,
+          active_groups: 2,
+          active_change: 0
+        });
+        return;
+      }
+
       const response = await api.get('/groups/stats');
       const body = response.data;
       setStats(body.data || body);
@@ -104,7 +145,7 @@ export default function GroupsPage() {
   const handleSubmitGroup = async (e) => {
     e.preventDefault();
     try {
-  const payload = { name: formModal.name.trim(), description: formModal.description.trim(), has_math: !!formModal.has_math };
+      const payload = { name: formModal.name.trim(), description: formModal.description.trim(), has_math: !!formModal.has_math };
       if (!payload.name) {
         setError('Group name is required.');
         return;
@@ -114,7 +155,7 @@ export default function GroupsPage() {
       } else if (formModal.mode === 'edit' && formModal.group) {
         await api.put(`/groups/${formModal.group.id}`, payload);
       }
-  setFormModal({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false });
+      setFormModal({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false });
       await fetchGroups();
       await fetchStats();
       setError(null);
@@ -262,7 +303,7 @@ export default function GroupsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <LoadingOverlay isLoading={loading && groups.length === 0} />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="md:flex md:items-center md:justify-between mb-8">
@@ -411,7 +452,7 @@ export default function GroupsPage() {
       {/* Group Form Modal */}
       <Modal
         isOpen={formModal.open}
-  onClose={() => setFormModal({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false })}
+        onClose={() => setFormModal({ open: false, mode: 'create', group: null, name: '', description: '', has_math: false })}
         title={formModal.mode === 'create' ? 'New Group' : 'Edit Group'}
       >
         <form onSubmit={handleSubmitGroup} className="p-6 space-y-4">

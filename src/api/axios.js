@@ -35,24 +35,35 @@ api.interceptors.response.use(
           const response = await axios.post(`${api.defaults.baseURL}/auth/refresh`, {
             refresh_token: refreshToken
           });
-          
+
           const tokenData = response.data.data; // Backend returns: { success: true, data: { token: "...", refresh_token: "..." } }
           localStorage.setItem('token', tokenData.token);
           if (tokenData.refresh_token) {
             localStorage.setItem('refreshToken', tokenData.refresh_token);
           }
-          
+
           // Retry original request with new token
           originalRequest.headers.Authorization = `Bearer ${tokenData.token}`;
           return api(originalRequest);
         }
       } catch (refreshError) {
         // Refresh failed, redirect to login
+        // Check if we are in mock mode - if so, don't logout
+        if (localStorage.getItem('token') === 'mock-jwt-token') {
+          console.warn('Mock token invalid (expected), keeping session active.');
+          return Promise.reject(refreshError);
+        }
+
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
+    }
+
+    // Also check for mock token on simple 401s (if retry logic was skipped or failed immediately)
+    if (error.response?.status === 401 && localStorage.getItem('token') === 'mock-jwt-token') {
+      return Promise.reject(error);
     }
 
     return Promise.reject(error);
