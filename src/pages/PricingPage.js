@@ -23,7 +23,7 @@ export default function PricingPage() {
         <div className="absolute inset-0 login-hero-bg opacity-[0.08]" aria-hidden="true" />
         <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20 text-center">
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">SmartScript — Pricing (GHS ₵)</h1>
-          <p className="mt-4 text-gray-700 max-w-3xl mx-auto">Simple, transparent plans for tutors, schools, and exam authorities. Uploads are free; OCR and AI marking consume scripts.</p>
+          <p className="mt-4 text-gray-700 max-w-3xl mx-auto">Simple, flexible pricing for tutors, schools, and exam authorities. Uploads are free; just pay for what you mark.</p>
           <div className="mt-6 flex items-center justify-center gap-3">
             <Link to="/signup?plan=standard" className="inline-flex items-center gap-2 rounded-md bg-smart-indigo px-5 py-3 text-white shadow hover:bg-indigo-700 transition">
               Get Started
@@ -38,16 +38,17 @@ export default function PricingPage() {
           <PlanCard
             icon={Rocket}
             color="from-blue-600 to-indigo-600"
-            name="Standard"
-            price="₵49 / month"
-            desc="Perfect for tutors, schools, and individual educators."
+            name="Pay As You Go"
+            price="Credits from ₵0.35"
+            desc="Buy credits as you need them. No monthly subscription."
             bullets={[
-              '100 scripts / month included',
-              'OCR + AI marking',
+              'No monthly fees - pay only for what you use',
+              'Credits never expire',
+              'OCR + AI marking included',
               'Exports: PDF & Excel',
               'Basic reports & per-subject grouping',
               'Email support',
-              'Extra scripts: ₵1.00 / script',
+              'Volume discounts available',
             ]}
             cta={{ label: 'Get Started', to: '/signup?plan=standard', plan: 'standard' }}
           />
@@ -77,9 +78,8 @@ export default function PricingPage() {
         <div className="mx-auto max-w-5xl px-6">
           <h2 className="text-2xl font-bold text-gray-900">Simple & Fair Billing</h2>
           <ul className="mt-4 space-y-2 text-gray-700">
-            <li>• <strong>Standard Plan:</strong> Includes 100 scripts. You can buy more credits if needed.</li>
-            <li>• <strong>Organization Plan:</strong> Tailored contracts for high volume, specific compliance needs, or on-premise deployment.</li>
-            <li>• <strong>Credits:</strong> 1 credit = 1 script (up to 3 pages). Extra pages use more credits.</li>
+            <li>• <strong>Pay As You Go:</strong> Purchase credits to scan and mark scripts. 1 credit covers 2 pages.</li>
+            <li>• <strong>Credits:</strong> 1 credit = 2 pages processed. Extra pages use more credits.</li>
             <li>• <strong>Trial:</strong> New accounts get 5 free scripts to test the system.</li>
           </ul>
         </div>

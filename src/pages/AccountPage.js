@@ -104,13 +104,14 @@ export default function AccountPage() {
     const base = 'inline-flex items-center px-2 py-1 rounded text-xs font-medium';
     const isCustom = billing.on_prem || billing.plan === 'enterprise' || billing.plan === 'custom';
     const color = isCustom ? 'bg-purple-600 text-white' : 'bg-blue-600 text-white';
-    const label = isCustom ? 'Organization' : 'Standard';
+    const label = isCustom ? 'Organization' : 'Pay As You Go';
     return <span className={`${base} ${color}`}>{label}</span>;
   };
 
   const getPerCreditPrice = (plan, credits) => {
-    const table = { 50: 1.0, 100: 0.9, 250: 0.8, 500: 0.7 };
-    return table[credits] || table[50];
+    // Requested pricing: All 0.40, except 350 (and above) which is 0.35
+    if (credits >= 350) return 0.35;
+    return 0.40;
   };
 
   const computePackagePrice = (plan, credits) => {
@@ -118,11 +119,11 @@ export default function AccountPage() {
     return Math.round(credits * unit * 100) / 100;
   };
 
-  const creditPackages = [50, 100, 250, 500].map((c) => ({
+  const creditPackages = [50, 100, 200, 350].map((c) => ({
     credits: c,
     price: computePackagePrice(billing?.plan || 'starter', c),
     unit: getPerCreditPrice(billing?.plan || 'starter', c),
-    popular: c === 100,
+    popular: c === 350,
   }));
 
   const handlePaymentSuccess = async (response) => {
@@ -186,7 +187,7 @@ export default function AccountPage() {
 
               <div className="text-sm text-gray-600">
                 <p>Credits are used for OCR processing and AI marking.</p>
-                <p className="mt-1">• 1 credit = 1 script (up to 3 pages)</p>
+                <p className="mt-1">• 1 credit = 2 pages processed</p>
               </div>
 
               <button
@@ -235,7 +236,7 @@ export default function AccountPage() {
           <h2 className="text-lg font-semibold mb-4">Billing</h2>
           {billing ? (
             <div className="space-y-2 text-sm text-gray-700">
-              <div>Current plan: <strong className="text-gray-900">{billing.on_prem ? 'On-Premise' : (billing.plan === 'enterprise' || billing.plan === 'custom' ? 'ORGANIZATION' : 'STANDARD')}</strong></div>
+              <div>Current plan: <strong className="text-gray-900">{billing.on_prem ? 'On-Premise' : (billing.plan === 'enterprise' || billing.plan === 'custom' ? 'ORGANIZATION' : 'PAY AS YOU GO')}</strong></div>
               {billing.plan_seats ? <div>Seats: <strong className="text-gray-900">{billing.plan_seats}</strong></div> : null}
               {billing.is_seat && billing.parent_tenant_id ? (
                 <div className="text-gray-600">You’re a seat under organization <code className="px-1 py-0.5 bg-gray-100 rounded">{billing.parent_tenant_id}</code></div>
@@ -312,7 +313,7 @@ export default function AccountPage() {
                     <p className="font-medium">About Credits:</p>
                     <ul className="mt-1 space-y-1">
                       <li>• Credits are used for OCR processing and AI marking</li>
-                      <li>• 1 credit = 1 script (up to 3 pages)</li>
+                      <li>• 1 credit = 2 pages processed</li>
                       <li>• Additional pages cost extra credits</li>
                       <li>• Credits never expire</li>
                     </ul>
