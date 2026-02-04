@@ -130,13 +130,46 @@ export default function MarkingGroupsPage() {
     }
   };
 
+  const pauseGroups = async (ids) => {
+    if (!ids || ids.length === 0) return;
+    try {
+      setBulkBusy(true);
+      await api.post('/marking-groups/pause', { group_ids: ids });
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to pause marking:', err);
+      setError('Failed to pause marking');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const resumeGroups = async (ids) => {
+    if (!ids || ids.length === 0) return;
+    try {
+      setBulkBusy(true);
+      await api.post('/marking-groups/resume', { group_ids: ids });
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to resume marking:', err);
+      setError('Failed to resume marking');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const statusPill = (st) => {
     const map = {
       idle: 'bg-gray-100 text-gray-700',
       processing: 'bg-blue-100 text-blue-700',
       completed: 'bg-green-100 text-green-700',
+      paused: 'bg-amber-100 text-amber-700',
     };
-    const icon = st === 'completed' ? <CheckCircle className="w-4 h-4 mr-1" /> : st === 'processing' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Circle className="w-4 h-4 mr-1" />;
+    let icon = <Circle className="w-4 h-4 mr-1" />;
+    if (st === 'completed') icon = <CheckCircle className="w-4 h-4 mr-1" />;
+    else if (st === 'processing') icon = <Loader2 className="w-4 h-4 mr-1 animate-spin" />;
+    else if (st === 'paused') icon = <span className="w-4 h-4 mr-1 font-bold">||</span>; // Pause icon
+
     return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${map[st] || map.idle}`}>{icon}{st || 'idle'}</span>;
   };
 
@@ -148,7 +181,8 @@ export default function MarkingGroupsPage() {
       options: [
         { value: 'idle', label: 'Idle' },
         { value: 'processing', label: 'Processing' },
-        { value: 'completed', label: 'Completed' }
+        { value: 'completed', label: 'Completed' },
+        { value: 'paused', label: 'Paused' }
       ]
     },
     {
@@ -223,12 +257,29 @@ export default function MarkingGroupsPage() {
       title: 'Actions',
       render: (value, row) => (
         <div className="flex items-center space-x-2">
-          <button
-            onClick={() => startGroups([row.group_id])}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
-          >
-            <Play className="w-3.5 h-3.5" /> Start
-          </button>
+          {row.status === 'processing' ? (
+            <button
+              onClick={() => pauseGroups([row.group_id])}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200"
+            >
+              Pause
+            </button>
+          ) : row.status === 'paused' ? (
+            <button
+              onClick={() => resumeGroups([row.group_id])}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-green-100 text-green-700 hover:bg-green-200"
+            >
+              Resume
+            </button>
+          ) : (
+            <button
+              onClick={() => startGroups([row.group_id])}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              <Play className="w-3.5 h-3.5" /> Start
+            </button>
+          )}
+
           <Link
             to={`/uploads/group/${row.group_id}`}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-white border border-gray-300 hover:bg-gray-50"
@@ -268,6 +319,12 @@ export default function MarkingGroupsPage() {
             <button disabled={selectedIds.length === 0 || bulkBusy} onClick={() => startGroups(selectedIds)} className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
               <Play className="w-4 h-4" /> Start Selected ({selectedIds.length})
             </button>
+            <button disabled={selectedIds.length === 0 || bulkBusy} onClick={() => pauseGroups(selectedIds)} className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md text-gray-700 bg-amber-100 hover:bg-amber-200 disabled:opacity-50">
+              Pause ({selectedIds.length})
+            </button>
+            <button disabled={selectedIds.length === 0 || bulkBusy} onClick={() => resumeGroups(selectedIds)} className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md text-gray-700 bg-green-100 hover:bg-green-200 disabled:opacity-50">
+              Resume ({selectedIds.length})
+            </button>
           </div>
         </div>
 
@@ -303,6 +360,12 @@ export default function MarkingGroupsPage() {
               disabled: selectedIds.length === 0 || bulkBusy,
               icon: Play,
               variant: 'primary'
+            },
+            {
+              label: 'Pause',
+              action: () => pauseGroups(selectedIds),
+              disabled: selectedIds.length === 0 || bulkBusy,
+              variant: 'secondary' // needs styling support in EnhancedDataTable or passed class
             }
           ]}
           onBulkSelect={toggleAll}

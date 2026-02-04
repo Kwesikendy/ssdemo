@@ -215,8 +215,34 @@ const AnomaliesPage = () => {
           {formatDate(value)}
         </div>
       )
+    },
+    {
+      key: 'actions',
+      title: 'Actions',
+      render: (value, row) => (
+        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => handleRetry(row.exam_id)}
+            className="text-indigo-600 hover:text-indigo-900 text-xs font-medium bg-indigo-50 px-2 py-1 rounded border border-indigo-200"
+          >
+            Retry All
+          </button>
+        </div>
+      )
     }
   ];
+
+  const handleRetry = async (examId) => {
+    // This logic is actually per-anomaly in the drill-down page usually, but maybe we can trigger a group retry?
+    // The backend `RetryOCR` takes an `anomaly_id`. 
+    // The `AnomaliesPage` (this one) lists *Groups* (Exams). 
+    // To implement "Retry" here, we'd need to retry all anomalies in the group, OR just navigate to the details.
+    // The user request was "Anomaly Resolution UI".
+    // Let's check `ExamAnomaliesPage.js` - THAT is likely where the individual anomalies are listed.
+    // This page is just the summary.
+    // I should check `ExamAnomaliesPage.js`.
+    navigate(`/anomalies/exam/${examId}`);
+  };
 
   // Filter and paginate data
   const filteredData = useMemo(() => {

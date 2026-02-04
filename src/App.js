@@ -24,6 +24,8 @@ import GroupUploadsPage from './pages/GroupUploadsPage';
 import UploadDetailPage from './pages/UploadDetailPage';
 import PageDetailPage from './pages/PageDetailPage';
 import CandidatePagesView from './pages/CandidatePagesView';
+import AppealsPage from './pages/AppealsPage';
+import GlobalCandidatesPage from './pages/GlobalCandidatesPage';
 import './App.css';
 
 import './App.css';
@@ -57,6 +59,8 @@ const AppContent = () => {
           <Route path="/schemes" element={<ProtectedRoute><SchemesPage /></ProtectedRoute>} />
           <Route path="/upload-scheme" element={<ProtectedRoute><UploadScheme /></ProtectedRoute>} />
           <Route path="/groups" element={<ProtectedRoute><GroupsPage /></ProtectedRoute>} />
+          <Route path="/appeals" element={<ProtectedRoute><AppealsPage /></ProtectedRoute>} />
+          <Route path="/candidates" element={<ProtectedRoute><GlobalCandidatesPage /></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
         </Routes>
       </ToastProvider>
