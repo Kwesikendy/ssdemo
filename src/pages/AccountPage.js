@@ -109,9 +109,9 @@ export default function AccountPage() {
   };
 
   const getPerCreditPrice = (plan, credits) => {
-    // Requested pricing: All 0.40, except 350 (and above) which is 0.35
-    if (credits >= 350) return 0.35;
-    return 0.40;
+    // Requested pricing: Base 0.39, Bulk 0.35 for 700+
+    if (credits >= 700) return 0.35;
+    return 0.39;
   };
 
   const computePackagePrice = (plan, credits) => {
@@ -119,11 +119,11 @@ export default function AccountPage() {
     return Math.round(credits * unit * 100) / 100;
   };
 
-  const creditPackages = [50, 100, 200, 350].map((c) => ({
+  const creditPackages = [100, 200, 400, 700].map((c) => ({
     credits: c,
     price: computePackagePrice(billing?.plan || 'starter', c),
     unit: getPerCreditPrice(billing?.plan || 'starter', c),
-    popular: c === 350,
+    popular: c === 700,
   }));
 
   const handlePaymentSuccess = async (response) => {
@@ -187,7 +187,7 @@ export default function AccountPage() {
 
               <div className="text-sm text-gray-600">
                 <p>Credits are used for OCR processing and AI marking.</p>
-                <p className="mt-1">• 1 credit = 2 pages processed</p>
+                <p className="mt-1">• 1 credit = 1 page processed (OCR)</p>
               </div>
 
               <button
@@ -313,8 +313,7 @@ export default function AccountPage() {
                     <p className="font-medium">About Credits:</p>
                     <ul className="mt-1 space-y-1">
                       <li>• Credits are used for OCR processing and AI marking</li>
-                      <li>• 1 credit = 2 pages processed</li>
-                      <li>• Additional pages cost extra credits</li>
+                      <li>• 1 credit = 1 page processed</li>
                       <li>• Credits never expire</li>
                     </ul>
                   </div>

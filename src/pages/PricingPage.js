@@ -78,8 +78,8 @@ export default function PricingPage() {
         <div className="mx-auto max-w-5xl px-6">
           <h2 className="text-2xl font-bold text-gray-900">Simple & Fair Billing</h2>
           <ul className="mt-4 space-y-2 text-gray-700">
-            <li>• <strong>Pay As You Go:</strong> Purchase credits to scan and mark scripts. 1 credit covers 2 pages.</li>
-            <li>• <strong>Credits:</strong> 1 credit = 2 pages processed. Extra pages use more credits.</li>
+            <li>• <strong>Pay As You Go:</strong> Purchase credits to scan and mark scripts. 1 credit covers 1 page.</li>
+            <li>• <strong>Credits:</strong> 1 credit = 1 page processed. Extra pages use more credits.</li>
             <li>• <strong>Trial:</strong> New accounts get 5 free scripts to test the system.</li>
           </ul>
         </div>
