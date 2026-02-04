@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Eye, RefreshCw } from 'lucide-react';
+import { Users, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import EnhancedDataTable from '../components/EnhancedDataTable';
@@ -218,21 +218,6 @@ export default function UploadsPage() {
       render: (value) => (
         <span className="text-sm text-gray-500">{formatDate(value)}</span>
       )
-    },
-    {
-      key: 'actions',
-      title: 'Actions',
-      render: (value, row) => (
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => handleViewGroupUploads(row)}
-            className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-indigo-50"
-            title="View Uploads"
-          >
-            <Eye className="h-4 w-4" />
-          </button>
-        </div>
-      )
     }
   ];
 
@@ -327,6 +312,7 @@ export default function UploadsPage() {
             emptyStateMessage="No upload groups found. Upload some scripts to get started."
             onRefresh={handleRefresh}
             refreshLoading={refreshing}
+            onRowClick={handleViewGroupUploads}
           />
         </motion.div>
       </div>

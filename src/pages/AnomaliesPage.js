@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   RefreshCw,
   CheckCircle,
-  Eye,
   Clock,
   Users,
   FileText
@@ -216,21 +215,6 @@ const AnomaliesPage = () => {
           {formatDate(value)}
         </div>
       )
-    },
-    {
-      key: 'actions',
-      title: 'Actions',
-      render: (value, row) => (
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => navigate(`/anomalies/exam/${row.exam_id}`)}
-            className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-indigo-50"
-            title="View Details"
-          >
-            <Eye className="h-4 w-4" />
-          </button>
-        </div>
-      )
     }
   ];
 
@@ -377,7 +361,9 @@ const AnomaliesPage = () => {
             showPerPageSelector={true}
             emptyStateIcon="✅"
             emptyStateMessage="No anomalies found. All exams are processing correctly!"
+
             onRefresh={fetchAnomalyGroups}
+            onRowClick={(row) => navigate(`/anomalies/exam/${row.exam_id}`)}
           />
         </motion.div>
       </div>

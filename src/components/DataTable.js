@@ -2,16 +2,17 @@ import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
-export default function DataTable({ 
-  data = [], 
-  columns = [], 
+export default function DataTable({
+  data = [],
+  columns = [],
   loading = false,
   pagination = null,
-  onPageChange = () => {},
-  onSort = () => {},
+  onPageChange = () => { },
+  onSort = () => { },
   sortField = null,
   sortDirection = 'asc',
-  className = ''
+  className = '',
+  onRowClick = null
 }) {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [localSortField, setLocalSortField] = useState(null);
@@ -109,16 +110,15 @@ export default function DataTable({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                    column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
-                  }`}
+                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
+                    }`}
                   onClick={() => column.sortable && handleSort(column.key)}
                 >
                   <div className="flex items-center space-x-1">
                     <span>{column.title}</span>
-        {column.sortable && effectiveSortField === column.key && (
+                    {column.sortable && effectiveSortField === column.key && (
                       <span className="text-indigo-600">
-      {effectiveSortDirection === 'asc' ? '↑' : '↓'}
+                        {effectiveSortDirection === 'asc' ? '↑' : '↓'}
                       </span>
                     )}
                   </div>
@@ -126,10 +126,10 @@ export default function DataTable({
               ))}
             </tr>
           </thead>
-      <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white divide-y divide-gray-200">
             {data.length === 0 ? (
               <tr>
-    <td colSpan={columns.length + (columns.some(col => col.type === 'checkbox') ? 1 : 0)} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={columns.length + (columns.some(col => col.type === 'checkbox') ? 1 : 0)} className="px-6 py-12 text-center text-gray-500">
                   <div className="flex flex-col items-center space-y-2">
                     <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                       <span className="text-gray-400 text-xl">📄</span>
@@ -139,13 +139,14 @@ export default function DataTable({
                 </td>
               </tr>
             ) : (
-  sortedData.map((row, index) => (
+              sortedData.map((row, index) => (
                 <motion.tr
                   key={index}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: index * 0.05 }}
-          className="hover:bg-gray-50 transition-colors"
+                  onClick={() => onRowClick && onRowClick(row)}
+                  className={`hover:bg-gray-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
                 >
                   {columns.some(col => col.type === 'checkbox') && (
                     <td className="px-6 py-4">
@@ -172,9 +173,9 @@ export default function DataTable({
 
       {/* Pagination */}
       {pagination && (
-    <div className="bg-white px-2 sm:px-4 py-3 border-t border-gray-200">
+        <div className="bg-white px-2 sm:px-4 py-3 border-t border-gray-200">
           <div className="flex items-center justify-between">
-      <div className="flex-1 flex justify-between sm:hidden">
+            <div className="flex-1 flex justify-between sm:hidden">
               <button
                 onClick={() => onPageChange(pagination.page - 1)}
                 disabled={pagination.page <= 1}
@@ -220,7 +221,7 @@ export default function DataTable({
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
-                  
+
                   {/* Page numbers */}
                   {[...Array(Math.min(5, pagination.total_pages))].map((_, i) => {
                     const pageNum = pagination.page - 2 + i;
@@ -229,17 +230,16 @@ export default function DataTable({
                       <button
                         key={pageNum}
                         onClick={() => onPageChange(pageNum)}
-                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                          pageNum === pagination.page
-                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                        }`}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${pageNum === pagination.page
+                          ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
                       >
                         {pageNum}
                       </button>
                     );
                   })}
-                  
+
                   <button
                     onClick={() => onPageChange(pagination.page + 1)}
                     disabled={pagination.page >= pagination.total_pages}

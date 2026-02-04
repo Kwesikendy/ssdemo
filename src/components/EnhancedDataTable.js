@@ -1,12 +1,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  ChevronsLeft, 
-  ChevronsRight, 
-  Search, 
-  Filter, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Search,
+  Filter,
   X,
   ArrowUpDown,
   ArrowUp,
@@ -14,15 +14,15 @@ import {
   RefreshCw
 } from 'lucide-react';
 
-export default function EnhancedDataTable({ 
-  data = [], 
-  columns = [], 
+export default function EnhancedDataTable({
+  data = [],
+  columns = [],
   loading = false,
   pagination = null,
-  onPageChange = () => {},
-  onSort = () => {},
-  onSearch = () => {},
-  onFilter = () => {},
+  onPageChange = () => { },
+  onSort = () => { },
+  onSearch = () => { },
+  onFilter = () => { },
   sortField = null,
   sortDirection = 'asc',
   searchTerm = '',
@@ -41,7 +41,9 @@ export default function EnhancedDataTable({
   refreshLoading = false,
   bulkActions = [],
   onBulkSelect = null,
-  onRowSelect = null,
+
+  onRowSelect = null, // selection callback
+  onRowClick = null, // navigation callback
   selectedRows = {}
 }) {
   const [internalSelectedRows, setInternalSelectedRows] = useState(selectedRows || {});
@@ -231,11 +233,10 @@ export default function EnhancedDataTable({
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setShowFilterPanel(!showFilterPanel)}
-                  className={`inline-flex items-center px-3 py-2 border text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                    activeFiltersCount > 0
-                      ? 'border-indigo-300 text-indigo-700 bg-indigo-50'
-                      : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
-                  }`}
+                  className={`inline-flex items-center px-3 py-2 border text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${activeFiltersCount > 0
+                    ? 'border-indigo-300 text-indigo-700 bg-indigo-50'
+                    : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                    }`}
                 >
                   <Filter className="h-4 w-4 mr-2" />
                   Filters
@@ -344,11 +345,10 @@ export default function EnhancedDataTable({
                     key={index}
                     onClick={action.action}
                     disabled={action.disabled}
-                    className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
-                      action.variant === 'primary'
-                        ? 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-50'
-                    }`}
+                    className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${action.variant === 'primary'
+                      ? 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-50'
+                      }`}
                   >
                     {Icon && <Icon className="w-4 h-4 mr-1.5" />}
                     {action.label}
@@ -378,9 +378,8 @@ export default function EnhancedDataTable({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                    column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
-                  }`}
+                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
+                    }`}
                   onClick={() => column.sortable && handleSort(column.key)}
                 >
                   <div className="flex items-center space-x-1">
@@ -422,7 +421,8 @@ export default function EnhancedDataTable({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: index * 0.05 }}
-                  className="hover:bg-gray-50 transition-colors"
+                  onClick={() => onRowClick && onRowClick(row)}
+                  className={`hover:bg-gray-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
                 >
                   {bulkActions.length > 0 && (
                     <td className="px-6 py-4">
@@ -497,7 +497,7 @@ export default function EnhancedDataTable({
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
-                  
+
                   {/* Page numbers */}
                   {[...Array(Math.min(5, pagination.total_pages))].map((_, i) => {
                     const pageNum = pagination.page - 2 + i;
@@ -506,17 +506,16 @@ export default function EnhancedDataTable({
                       <button
                         key={pageNum}
                         onClick={() => onPageChange(pageNum)}
-                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                          pageNum === pagination.page
-                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                        }`}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${pageNum === pagination.page
+                          ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
                       >
                         {pageNum}
                       </button>
                     );
                   })}
-                  
+
                   <button
                     onClick={() => onPageChange(pagination.page + 1)}
                     disabled={pagination.page >= pagination.total_pages}

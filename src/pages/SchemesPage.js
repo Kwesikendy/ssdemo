@@ -387,16 +387,9 @@ export default function SchemesPage() {
       title: 'Actions',
       render: (value, row) => (
         <div className="flex items-center space-x-2">
-          <button
-            onClick={() => handleViewScheme(row)}
-            className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-indigo-50"
-            title="View Scheme"
-          >
-            <FileText className="h-4 w-4" />
-          </button>
           {row?.questions && typeof row.questions === 'object' && row.questions.origin === 'image' && (
             <button
-              onClick={() => handleDownloadScheme(row)}
+              onClick={(e) => { e.stopPropagation(); handleDownloadScheme(row); }}
               className="text-green-600 hover:text-green-900 p-1 rounded-full hover:bg-green-50"
               title="Download Scheme"
             >
@@ -404,14 +397,14 @@ export default function SchemesPage() {
             </button>
           )}
           <button
-            onClick={() => handleEditScheme(row)}
+            onClick={(e) => { e.stopPropagation(); handleEditScheme(row); }}
             className="text-yellow-600 hover:text-yellow-900 p-1 rounded-full hover:bg-yellow-50"
             title="Edit Scheme"
           >
             <Edit className="h-4 w-4" />
           </button>
           <button
-            onClick={() => setDeleteModal({ open: true, scheme: row })}
+            onClick={(e) => { e.stopPropagation(); setDeleteModal({ open: true, scheme: row }); }}
             className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50"
             title="Delete Scheme"
           >
@@ -526,6 +519,7 @@ export default function SchemesPage() {
             showPerPageSelector={true}
             emptyStateIcon="📝"
             emptyStateMessage="No marking schemes found. Create your first scheme to get started."
+            onRowClick={handleViewScheme}
           />
         </motion.div>
       </div>

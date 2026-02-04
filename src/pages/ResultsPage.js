@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Download, Eye, BarChart3, ArrowLeft, Filter, Search } from 'lucide-react';
+import { Download, BarChart3, ArrowLeft, Filter, Search } from 'lucide-react';
 import EnhancedDataTable from '../components/EnhancedDataTable';
 import StatsCard from '../components/StatsCard';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -310,15 +310,6 @@ export default function ResultsPage() {
       render: (value) => (
         <span className="text-sm text-gray-900">{value || 0}</span>
       )
-    },
-    {
-      key: 'actions',
-      title: 'Actions',
-      render: (v, row) => (
-        <div className="flex items-center gap-2">
-          <Link to={`/results/group/${row.id}`} className="text-indigo-600 hover:text-indigo-900 text-sm">View Results</Link>
-        </div>
-      )
     }
   ]), []);
 
@@ -347,17 +338,6 @@ export default function ResultsPage() {
       key: 'updated_at_unix',
       title: 'Updated',
       render: (v) => <span className="text-sm text-gray-500">{formatUnix(v)}</span>
-    },
-    {
-      key: 'actions',
-      title: 'Actions',
-      render: (v, row) => (
-        <div className="flex items-center gap-2">
-          <button onClick={() => navigate(`/results/candidates/${row.candidate_id}`)} className="text-indigo-600 hover:text-indigo-900" title="View candidate">
-            <Eye className="w-4 h-4" />
-          </button>
-        </div>
-      )
     }
   ]), [navigate]);
 
@@ -431,6 +411,7 @@ export default function ResultsPage() {
               showPerPageSelector={true}
               emptyStateIcon="📊"
               emptyStateMessage="No groups with results found. Upload and mark some scripts first."
+              onRowClick={(row) => navigate(`/results/group/${row.id}`)}
             />
           </motion.div>
         ) : (
@@ -474,6 +455,7 @@ export default function ResultsPage() {
                 showPerPageSelector={true}
                 emptyStateIcon="📝"
                 emptyStateMessage="No results found for this group. Mark some scripts to see results here."
+                onRowClick={(row) => navigate(`/results/candidates/${row.candidate_id}`)}
               />
             </motion.div>
           </>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, Search, FileText, Users, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Users, X, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import EnhancedDataTable from '../components/EnhancedDataTable';
@@ -275,21 +275,14 @@ export default function GroupsPage() {
       render: (value, row) => (
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => handleViewGroup(row)}
-            className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-indigo-50"
-            title="View Group Uploads"
-          >
-            <FileText className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => handleOpenEdit(row)}
+            onClick={(e) => { e.stopPropagation(); handleOpenEdit(row); }}
             className="text-yellow-600 hover:text-yellow-900 p-1 rounded-full hover:bg-yellow-50"
             title="Edit Group"
           >
             <Edit className="h-4 w-4" />
           </button>
           <button
-            onClick={() => setDeleteModal({ open: true, group: row })}
+            onClick={(e) => { e.stopPropagation(); setDeleteModal({ open: true, group: row }); }}
             className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50"
             title="Delete Group"
           >
@@ -403,6 +396,7 @@ export default function GroupsPage() {
             showPerPageSelector={true}
             emptyStateIcon="📁"
             emptyStateMessage="No groups found. Create your first group to get started."
+            onRowClick={handleViewGroup}
           />
         </motion.div>
       </div>
