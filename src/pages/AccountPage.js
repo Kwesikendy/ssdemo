@@ -6,7 +6,6 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { CreditCard, Coins, Save } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { useToast } from '../components/ToastProvider';
-import Select from 'react-select';
 
 export default function AccountPage() {
   const { user, setUser, devMode } = useContext(AuthContext);
@@ -21,8 +20,6 @@ export default function AccountPage() {
   const [error, setError] = useState('');
   const [credits, setCredits] = useState(0);
   const [showCreditPackages, setShowCreditPackages] = useState(false);
-  const [changingPlan, setChangingPlan] = useState(false);
-  const [llmModel, setLlmModel] = useState(() => localStorage.getItem('preferredLLMModel') || '');
 
   useEffect(() => {
     const load = async () => {
@@ -36,7 +33,7 @@ export default function AccountPage() {
           user_id: 'mock-user-id'
         });
         setBilling({
-          plan: savedMode === 'standard' ? 'pro' : 'enterprise',
+          plan: savedMode === 'standard' ? 'pro' : 'enterprise', // mapping pro->standard visually
           credits: savedMode === 'standard' ? 1000 : 0,
           on_prem: false
         });
@@ -102,77 +99,27 @@ export default function AccountPage() {
     }
   };
 
-  const changePlan = async (plan) => {
-    setChangingPlan(true);
-    setMessage('');
-    setError('');
-    toast.info(`Changing plan to ${plan.toUpperCase()}...`);
-    try {
-      const res = await api.post('/account/change-plan', { plan });
-      setBilling(res.data.data);
-      setCredits(res.data.data.credits || 0);
-      const successMsg = `Plan changed to ${res.data.data.plan.toUpperCase()}. Credits converted.`;
-      setMessage(successMsg);
-      toast.success(successMsg);
-      await fetchBillingData();
-    } catch (e) {
-      const errorMsg = e?.response?.data?.error?.message || 'Failed to change plan';
-      setError(errorMsg);
-      toast.error(errorMsg);
-    } finally {
-      setChangingPlan(false);
-    }
-  };
-
-  // LLM model options from Groq, covering major makers
-  const llmOptions = [
-    { label: 'Meta - Llama 3.3 70B', value: 'llama-3.3-70b-versatile' },
-    { label: 'OpenAI - GPT-OSS 120B', value: 'openai/gpt-oss-120b' }
-  ];
-
-  const savePreferredModel = async (option) => {
-    const value = option?.value || '';
-    setLlmModel(value);
-    localStorage.setItem('preferredLLMModel', value);
-    setMessage('Preferred LLM saved');
-    // Best-effort persist to backend if supported
-    try {
-      await api.post('/account/preferences', { llm_model: value });
-    } catch (e) {
-      // ignore if endpoint not available
-    }
-  };
-
   const planBadge = () => {
     if (!billing) return null;
     const base = 'inline-flex items-center px-2 py-1 rounded text-xs font-medium';
-    const color = billing.on_prem ? 'bg-gray-900 text-white' : billing.plan === 'pro' ? 'bg-fuchsia-600 text-white' : 'bg-blue-600 text-white';
-    const label = billing.on_prem ? 'On-Premise' : billing.plan ? billing.plan.charAt(0).toUpperCase() + billing.plan.slice(1) : 'Starter';
+    const isCustom = billing.on_prem || billing.plan === 'enterprise' || billing.plan === 'custom';
+    const color = isCustom ? 'bg-purple-600 text-white' : 'bg-blue-600 text-white';
+    const label = isCustom ? 'Organization' : 'Standard';
     return <span className={`${base} ${color}`}>{label}</span>;
   };
 
-  // Dynamic package pricing based on plan
-  // Assumption: per-credit price scales up with package size as requested.
-  // Starter per-credit: 50->1.00, 100->0.90, 250->0.80, 500->0.70 (decreasing)
-  // Pro per-credit:     50->1.30, 100->1.20, 250->1.10, 500->1.00 (decreasing)
   const getPerCreditPrice = (plan, credits) => {
-    const p = plan === 'pro' ? 'pro' : 'starter';
-    const table = {
-      starter: { 50: 1.0, 100: 0.9, 250: 0.8, 500: 0.7 },
-      pro: { 50: 1.3, 100: 1.2, 250: 1.1, 500: 1.0 },
-    };
-    return table[p][credits] || table[p][50];
+    const table = { 50: 1.0, 100: 0.9, 250: 0.8, 500: 0.7 };
+    return table[credits] || table[50];
   };
 
   const computePackagePrice = (plan, credits) => {
     const unit = getPerCreditPrice(plan, credits);
-    // Round to 2 decimals for display
     return Math.round(credits * unit * 100) / 100;
   };
 
-  const creditPackages = [50, 100, 250, 500].map((c, idx) => ({
+  const creditPackages = [50, 100, 250, 500].map((c) => ({
     credits: c,
-    // Compute price by plan; if billing not loaded yet, assume starter
     price: computePackagePrice(billing?.plan || 'starter', c),
     unit: getPerCreditPrice(billing?.plan || 'starter', c),
     popular: c === 100,
@@ -180,7 +127,6 @@ export default function AccountPage() {
 
   const handlePaymentSuccess = async (response) => {
     try {
-      // Verify payment on backend
       const verifyResponse = await api.post('/account/verify-payment', {
         reference: response.reference
       });
@@ -189,8 +135,6 @@ export default function AccountPage() {
         const creditsAdded = verifyResponse.data.data.credits_added;
         setMessage(`Payment successful! ${creditsAdded} credits have been added to your account.`);
         setShowCreditPackages(false);
-
-        // Refresh billing data to get updated credits
         await fetchBillingData();
       } else {
         setError('Payment verification failed. Please contact support.');
@@ -285,45 +229,17 @@ export default function AccountPage() {
               )}
             </button>
           </form>
-          <div className="mt-6">
-            <label className="text-sm text-gray-600">Preferred LLM (Groq)</label>
-            <Select
-              className="mt-1"
-              options={llmOptions}
-              value={llmOptions.find(o => o.value === llmModel) || null}
-              onChange={savePreferredModel}
-              placeholder="Select a model"
-            />
-            <p className="mt-1 text-xs text-gray-500">Used by AI marking. Covers one from Meta, Mistral, Qwen, and an OpenAI-compatible family hosted by Groq.</p>
-          </div>
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">Billing</h2>
           {billing ? (
             <div className="space-y-2 text-sm text-gray-700">
-              <div>Current plan: <strong className="text-gray-900">{billing.on_prem ? 'On-Premise' : (billing.plan?.toUpperCase() || 'STARTER')}</strong></div>
+              <div>Current plan: <strong className="text-gray-900">{billing.on_prem ? 'On-Premise' : (billing.plan === 'enterprise' || billing.plan === 'custom' ? 'ORGANIZATION' : 'STANDARD')}</strong></div>
               {billing.plan_seats ? <div>Seats: <strong className="text-gray-900">{billing.plan_seats}</strong></div> : null}
               {billing.is_seat && billing.parent_tenant_id ? (
                 <div className="text-gray-600">You’re a seat under organization <code className="px-1 py-0.5 bg-gray-100 rounded">{billing.parent_tenant_id}</code></div>
               ) : null}
-              {!billing.on_prem && (
-                <div className="flex gap-2 pt-2">
-                  {billing.plan !== 'pro' ? (
-                    <button
-                      disabled={changingPlan}
-                      onClick={() => changePlan('pro')}
-                      className="inline-flex items-center justify-center px-4 py-2 rounded-md text-white bg-fuchsia-600 hover:bg-fuchsia-700 disabled:opacity-50"
-                    >{changingPlan ? 'Upgrading…' : 'Upgrade to Pro'}</button>
-                  ) : (
-                    <button
-                      disabled={changingPlan}
-                      onClick={() => changePlan('starter')}
-                      className="inline-flex items-center justify-center px-4 py-2 rounded-md text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-                    >{changingPlan ? 'Switching…' : 'Switch to Starter'}</button>
-                  )}
-                </div>
-              )}
               {!billing.on_prem && billing.plan !== 'custom' && billing.plan !== 'enterprise' && devMode !== 'custom' && (
                 <div className="pt-2">
                   <Link to="/pricing" className="inline-flex items-center justify-center px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50">View plans</Link>
@@ -336,7 +252,6 @@ export default function AccountPage() {
         </div>
       </div>
 
-      {/* Credit Packages Modal */}
       {showCreditPackages && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
