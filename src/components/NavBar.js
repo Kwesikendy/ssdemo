@@ -15,12 +15,15 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 
 export default function NavBar() {
   const { logout, user, devMode } = useAuth();
+  const { unreadCount, notifications, markAsRead, markAllAsRead, fetchNotifications } = useNotifications();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [anomalyCount, setAnomalyCount] = useState(0);
 
   const fetchAnomalyCount = async () => {
@@ -101,8 +104,8 @@ export default function NavBar() {
                     key={item.name}
                     to={item.href}
                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 relative ${isActive(item.href)
-                        ? 'bg-indigo-100 text-indigo-700 shadow-sm'
-                        : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
+                      ? 'bg-indigo-100 text-indigo-700 shadow-sm'
+                      : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
                       }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -121,11 +124,64 @@ export default function NavBar() {
           {/* Right side - Desktop */}
           <div className="hidden md:flex md:items-center md:space-x-3 lg:space-x-4">
             <div className="flex items-center space-x-4">
-              <button className="relative p-2 rounded-md text-gray-600 hover:text-indigo-600 hover:bg-gray-50">
-                <Bell className="w-5 h-5" />
-                {/* small unread badge placeholder */}
-                <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full">3</span>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                  className="relative p-2 rounded-md text-gray-600 hover:text-indigo-600 hover:bg-gray-50 focus:outline-none"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification Dropdown */}
+                {isNotificationsOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-100 rounded-md shadow-xl py-1 z-30 max-h-96 overflow-y-auto">
+                    <div className="px-4 py-2 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="text-sm font-semibold text-gray-700">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={() => { markAllAsRead(); setIsNotificationsOpen(false); }}
+                          className="text-xs text-indigo-600 hover:text-indigo-800"
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                        No notifications
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-50">
+                        {notifications.map((notif) => (
+                          <div
+                            key={notif.id}
+                            onClick={() => {
+                              if (!notif.is_read) markAsRead(notif.id);
+                              // If link exists, we might want to navigate
+                            }}
+                            className={`px-4 py-3 hover:bg-gray-50 transition cursor-pointer ${!notif.is_read ? 'bg-indigo-50/30' : ''}`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <p className={`text-sm ${!notif.is_read ? 'font-medium text-gray-900' : 'text-gray-600'}`}>
+                                {notif.title}
+                              </p>
+                              <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                                {new Date(notif.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{notif.message}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className="flex items-center space-x-3">
                 <div className="text-sm text-gray-700">
@@ -181,8 +237,8 @@ export default function NavBar() {
                   to={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={`block px-3 py-2 rounded-md text-base font-medium transition-all duration-200 flex items-center space-x-3 relative ${isActive(item.href)
-                      ? 'bg-indigo-100 text-indigo-700'
-                      : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
+                    ? 'bg-indigo-100 text-indigo-700'
+                    : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
                     }`}
                 >
                   <Icon className="w-5 h-5" />
