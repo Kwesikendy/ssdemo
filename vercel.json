@@ -2,6 +2,5 @@
   "framework": "create-react-app",
   "buildCommand": "npm run build",
   "outputDirectory": "build",
-  "installCommand": "npm install",
-  "ignoreCommand": "echo 'deploying frontend only'"
+  "installCommand": "npm install"
 }
