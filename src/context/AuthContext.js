@@ -20,26 +20,17 @@ export function AuthProvider({ children }) {
     }
   }, [devMode]);
 
-  const confirmDevMode = (mode) => {
+  const confirmDevMode = (mode, liveEmail, livePassword) => {
     setDevMode(mode);
     localStorage.setItem('devMode', mode);
     setShowDevModal(false);
 
-    // Automatically log in as mock user relative to that mode
-    // Pass 'mock-auto-login' as email to trigger the mock logic inside login()
-    // We already have devMode state updating, but to be safe we can rely on the 'mode' arg or wait for state
-    // Actually, login() checks devMode STATE. React state updates are scheduled, so 'devMode' might not be updated yet inside login() if called immediately.
-    // However, login() logic checks: (email.startsWith('mock') || devMode).
-    // If we pass a special mock email that signifies "use the mode I just picked", we might need to be careful.
-    // Better approach: Let's refactor login to accept an explicit mode override or just handle it here.
-    // Simplest: just call login with a mock email. 
-    // BUT devMode state won't be ready.
-    // Let's pass the mode explicitly to login or handle the mock login logic directly here.
-
-    // Let's call login with a special mock email that tells it to use the `mode` passing in.
-    // Limitation: login() signature is (email, password).
-    // Instead, let's just do the mock login logic RIGHT HERE to avoid race conditions.
-    performMockLogin(mode);
+    if (mode === 'live') {
+      // Do a REAL login against the backend
+      performLiveLogin(liveEmail || 'admin@smartscript.com', livePassword || 'demo1234');
+    } else {
+      performMockLogin(mode);
+    }
   };
 
   const performMockLogin = async (mode) => {
@@ -64,6 +55,28 @@ export function AuthProvider({ children }) {
     localStorage.setItem('refreshToken', 'mock-refresh-token');
     setLoading(false);
     navigate('/dashboard');
+  };
+
+  const performLiveLogin = async (email, password) => {
+    console.log('Performing live backend login...');
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/login', { email, password });
+      const tokenData = res.data.data;
+      persistToken(tokenData.token);
+      if (tokenData.refresh_token) {
+        localStorage.setItem('refreshToken', tokenData.refresh_token);
+      }
+      const userPayload = tokenData.user || null;
+      setUser(userPayload);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Live login failed:', err);
+      // Fallback to standard mock if backend unreachable
+      performMockLogin('standard');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Helper to persist token and keep axios in sync via interceptors
@@ -141,7 +154,8 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     // Mock login if in development and mode is selected OR using mock credentials
-    if (process.env.NODE_ENV === 'development' && (email.startsWith('mock') || devMode)) {
+    // But NOT if mode is 'live'
+    if (process.env.NODE_ENV === 'development' && devMode !== 'live' && (email.startsWith('mock') || devMode)) {
       console.log(`Doing mock login in ${devMode} mode`);
       const mockUser = {
         id: 'mock-user-id',

@@ -201,7 +201,7 @@ export default function GroupUploadsPage() {
       }, 200);
       
       // Use group endpoint; backend will tie to the group's exam automatically
-      await api.post(`/groups/${groupId}/uploads?mode=${encodeURIComponent(mode)}`, form, {
+      await api.post(`/groups/${groupId}/uploads`, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       
@@ -381,11 +381,11 @@ export default function GroupUploadsPage() {
           <form onSubmit={handleSubmitUpload} className="space-y-4">
             {/* Mode is always 'images' - PDF support removed */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Files</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Files (PDF or Images)</label>
               <input
                 type="file"
                 multiple
-                accept="image/*"
+                accept=".pdf,image/*"
                 onChange={(e) => setFiles(Array.from(e.target.files || []))}
                 className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
               />

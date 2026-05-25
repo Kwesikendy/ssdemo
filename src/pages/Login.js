@@ -33,9 +33,9 @@ export default function Login(){
       <div className="w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
   <div className="p-6 rounded-xl bg-white/85 shadow-xl login-card backdrop-blur-sm">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-indigo-600 to-blue-500 flex items-center justify-center text-white font-bold">S</div>
+            <img src="/logo.png" alt="SmartScript Logo" className="w-12 h-12 object-contain" />
             <div>
-              <h2 className="text-2xl font-bold">Smartscript</h2>
+              <h2 className="text-2xl font-bold">SmartScript</h2>
               <p className="text-sm text-gray-500">AI-assisted grading platform for educators.</p>
             </div>
           </div>

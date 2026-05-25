@@ -1,86 +1,73 @@
-# Getting Started with Create React App
+# SmartScript — AI Exam Marking Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+An AI-powered exam script marking platform that uses **Groq LLM** to automatically mark student exam scripts against marking schemes.
 
-## Available Scripts
+![SmartScript](./public/logo.png)
 
-In the project directory, you can run:
+## 📁 Project Structure
 
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
-
-## Tailwind setup
-
-Tailwind has been added as a dev dependency. Files added/updated:
-
-- `postcss.config.cjs` — PostCSS config to load Tailwind and Autoprefixer.
-- `tailwind.config.cjs` — Tailwind config with content paths including `src` and `public`.
-- `src/index.css` — now includes Tailwind directives (`@tailwind base`, `@tailwind components`, `@tailwind utilities`).
-
-To run the app with Tailwind in development:
-
-```powershell
-npm start
+```
+/                    ← React frontend (runs on port 3001)
+/backend/            ← Node.js/Express API (runs on port 8080)
 ```
 
-If your editor linter reports "Unknown at rule @tailwind", that's an editor linting plugin issue; the app will build with PostCSS when you run the dev server.
+## 🚀 Quick Start
+
+### 1. Backend
+```bash
+cd backend
+npm install
+cp .env.example .env    # Fill in your Groq API key
+npm run dev             # Starts on http://localhost:8080
+```
+
+### 2. Frontend
+```bash
+npm install
+npm start               # Starts on http://localhost:3001
+```
+
+### 3. Open the app
+Go to **http://localhost:3001** → choose **Live Demo** to connect to the real backend.
+
+## ✨ Features
+
+- 📄 **Upload exam scripts** — PDF or image files
+- 📋 **Marking schemes** — create with AI parsing or paste text directly
+- 🤖 **AI-powered marking** — Groq `llama-3.3-70b-versatile` marks each script
+- 📊 **Results dashboard** — scores, grades, per-question feedback
+- ⚠️ **Anomaly detection** — flags suspicious similarities or missing pages
+- 📥 **CSV export** — download results for any group
+
+## 🔑 Environment Variables
+
+### Backend (`backend/.env`)
+| Variable | Description |
+|---|---|
+| `PORT` | Server port (default: 8080) |
+| `JWT_SECRET` | Secret for signing JWTs |
+| `GROQ_API_KEY` | Your Groq API key from console.groq.com |
+
+See `backend/.env.example` for a template.
+
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, Tailwind CSS, Framer Motion |
+| Backend | Node.js, Express |
+| AI Marking | Groq SDK (`llama-3.3-70b-versatile`) |
+| Auth | JWT (in-memory, demo mode) |
+| Storage | In-memory (demo — resets on restart) |
+
+## 📝 Workflow
+
+```
+Create Group → Upload Marking Scheme → Upload Scripts → Start Marking → View Results
+```
+
+## ⚠️ Notes
+
+- This is a **demo** build using in-memory storage. Data resets on server restart.
+- The backend and frontend must both be running for Live Demo mode to work.
+- For production use, replace the in-memory store with a real database.

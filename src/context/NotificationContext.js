@@ -34,14 +34,15 @@ export const NotificationProvider = ({ children }) => {
         try {
             // Fetch latest 20 notifications
             const response = await api.get('/notifications?limit=20');
-            const data = response.data.data || [];
+            const raw = response.data.data;
+            const data = Array.isArray(raw) ? raw : (raw?.notifications || []);
 
             // Update state
             setNotifications(data);
 
             // Count unread (assuming backend doesn't always return count, though we have an endpoint for it)
             // We can also fetch unread count separately if needed, but for now filtering is fine
-            const unread = data.filter(n => !n.is_read).length;
+            const unread = data.filter(n => !n.is_read && !n.read).length;
 
             // Check for new notifications to trigger browser alert
             // Simple logic: if unread count increased or top item is new and unread

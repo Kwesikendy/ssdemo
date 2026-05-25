@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { GraduationCap, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 export default function PublicNavbar() {
   const [open, setOpen] = useState(false);
@@ -16,10 +16,8 @@ export default function PublicNavbar() {
         <div className="flex items-center justify-between py-4">
           {/* Brand */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-lg bg-white/15 backdrop-blur grid place-items-center ring-1 ring-white/20">
-              <GraduationCap className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-lg font-semibold tracking-tight">Smartscript</span>
+            <img src="/logo.png" alt="SmartScript Logo" className="h-9 w-9 object-contain drop-shadow-lg" />
+            <span className="text-lg font-semibold tracking-tight">SmartScript</span>
           </Link>
 
           {/* Desktop nav */}

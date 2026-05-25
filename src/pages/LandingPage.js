@@ -108,8 +108,8 @@ export default function LandingPage() {
       <footer className="border-t border-gray-100 py-8 text-sm text-gray-600">
         <div className="mx-auto max-w-7xl px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <GraduationCap className="w-5 h-5 text-smart-indigo"/>
-            <span className="font-semibold text-gray-900">Smartscript</span>
+            <img src="/logo.png" alt="SmartScript" className="h-7 w-7 object-contain" />
+            <span className="font-semibold text-gray-900">SmartScript</span>
           </div>
           <nav className="flex items-center gap-6">
             <a className="hover:text-gray-900" href="#features">Features</a>
@@ -117,7 +117,7 @@ export default function LandingPage() {
             <a className="hover:text-gray-900" href="#">Privacy</a>
             <Link className="hover:text-gray-900" to="/pricing">Pricing</Link>
           </nav>
-          <div className="text-gray-500">© {new Date().getFullYear()} Smartscript</div>
+          <div className="text-gray-500">© {new Date().getFullYear()} SmartScript</div>
         </div>
       </footer>
     </div>

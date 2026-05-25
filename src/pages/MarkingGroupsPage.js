@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Play, CheckCircle, Circle, Loader2, Upload, AlertTriangle, RefreshCw, ChevronRight, BarChart3 } from 'lucide-react';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -17,6 +17,8 @@ export default function MarkingGroupsPage() {
   const [filters, setFilters] = useState({});
   const [sortField, setSortField] = useState('group_name');
   const [sortDirection, setSortDirection] = useState('asc');
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const pollRef = useRef(null);
   const [pagination, setPagination] = useState({
     page: 1,
     per_page: 10,
@@ -30,9 +32,20 @@ export default function MarkingGroupsPage() {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  // Auto-poll every 4 seconds while any group is processing
+  useEffect(() => {
+    const isProcessing = rows.some(r => r.status === 'processing');
+    if (isProcessing) {
+      pollRef.current = setInterval(() => fetchData(false), 4000);
+    } else {
+      clearInterval(pollRef.current);
+    }
+    return () => clearInterval(pollRef.current);
+  }, [rows]);
+
+  const fetchData = async (showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       setError(null);
 
       // Mock Data Check
@@ -80,11 +93,12 @@ export default function MarkingGroupsPage() {
         total: data.length,
         total_pages: Math.ceil(data.length / prev.per_page)
       }));
+      setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
       console.error('Failed to load marking groups:', err);
       setError('Failed to load marking groups');
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
@@ -116,15 +130,33 @@ export default function MarkingGroupsPage() {
 
   const toggleOne = (id) => setSelected(prev => ({ ...prev, [id]: !prev[id] }));
 
+  const resetGroups = async (ids) => {
+    if (!ids || ids.length === 0) return;
+    try {
+      setBulkBusy(true);
+      await api.post('/marking-groups/pause', { group_ids: ids });
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to reset marking:', err);
+      setError('Failed to reset marking');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const startGroups = async (ids) => {
     if (!ids || ids.length === 0) return;
     try {
       setBulkBusy(true);
-      await api.post('/marking-groups/start', { group_ids: ids });
+      setError(null);
+      // Call the actual AI marking job for each group
+      for (const groupId of ids) {
+        await api.post(`/groups/${groupId}/marking-jobs/start`);
+      }
       await fetchData();
     } catch (err) {
       console.error('Failed to start marking:', err);
-      setError('Failed to start marking');
+      setError(err?.response?.data?.error?.message || 'Failed to start marking. Make sure a marking scheme is linked to the group.');
     } finally {
       setBulkBusy(false);
     }
@@ -258,12 +290,21 @@ export default function MarkingGroupsPage() {
       render: (value, row) => (
         <div className="flex items-center space-x-2">
           {row.status === 'processing' ? (
-            <button
-              onClick={() => pauseGroups([row.group_id])}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200"
-            >
-              Pause
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => pauseGroups([row.group_id])}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200"
+              >
+                Pause
+              </button>
+              <button
+                onClick={() => resetGroups([row.group_id])}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-red-100 text-red-700 hover:bg-red-200"
+                title="Stop and reset to idle"
+              >
+                ✕ Reset
+              </button>
+            </div>
           ) : row.status === 'paused' ? (
             <button
               onClick={() => resumeGroups([row.group_id])}
@@ -310,11 +351,25 @@ export default function MarkingGroupsPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Marking</h1>
-            <p className="text-sm text-gray-600">Control and monitor marking per group</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm text-gray-600">Control and monitor marking per group</p>
+              {rows.some(r => r.status === 'processing') && (
+                <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                  Live — auto-refreshing
+                </span>
+              )}
+              {lastUpdated && !rows.some(r => r.status === 'processing') && (
+                <span className="text-xs text-gray-400">Updated {lastUpdated}</span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={fetchData} className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-white border border-gray-300 hover:bg-gray-50">
               <RefreshCw className="w-4 h-4" /> Refresh
+            </button>
+            <button disabled={selectedIds.length === 0 || bulkBusy} onClick={() => resetGroups(selectedIds)} className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md text-red-700 bg-red-100 hover:bg-red-200 disabled:opacity-50">
+              ✕ Reset Selected
             </button>
             <button disabled={selectedIds.length === 0 || bulkBusy} onClick={() => startGroups(selectedIds)} className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
               <Play className="w-4 h-4" /> Start Selected ({selectedIds.length})
