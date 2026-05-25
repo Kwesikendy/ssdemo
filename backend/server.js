@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 require('dotenv').config();
 
@@ -23,12 +23,25 @@ const accountRoutes = require('./routes/account');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// CORS - allow all origins
+// CORS - allow frontend origin (set FRONTEND_URL in env for production)
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  process.env.FRONTEND_URL,         // e.g. https://ssdemo.vercel.app
+].filter(Boolean);
+
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.some(o => origin.startsWith(o))) return callback(null, true);
+    // Also allow any vercel.app or railway.app domain for convenience
+    if (origin.endsWith('.vercel.app') || origin.endsWith('.railway.app')) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: false
+  credentials: true
 }));
 
 // Body parsers
