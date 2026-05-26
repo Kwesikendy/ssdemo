@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import api from '../api/axios';
 import {
   AlertTriangle,
   RefreshCw,
@@ -39,6 +40,7 @@ const AnomaliesPage = () => {
   const fetchAnomalyGroups = async () => {
     try {
       setLoading(true);
+      setError(null);
 
       // Mock Data Check
       if (localStorage.getItem('token') === 'mock-jwt-token') {
@@ -60,37 +62,28 @@ const AnomaliesPage = () => {
         return;
       }
 
-      const response = await fetch('/api/v1/anomalies/groups', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Use the configured axios instance (points to http://localhost:8080/api/v1)
+      const { data } = await api.get('/anomalies/groups');
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch anomaly groups');
-      }
+      // Normalise field names: backend uses group_id/group_name,
+      // the UI expects exam_id/exam_name.
+      const raw = data.data || [];
+      const groups = raw.map(g => ({
+        ...g,
+        exam_id:   g.exam_id   ?? g.group_id   ?? '',
+        exam_name: g.exam_name ?? g.group_name  ?? 'Unknown Group',
+        anomalies: g.anomalies || [],
+      }));
 
-      const data = await response.json();
-      const groups = data.data || [];
       setAnomalyGroups(groups);
-
-      // Update pagination with filtered data
-      const filtered = groups.filter(group => {
-        if (searchTerm) {
-          return group.exam_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            group.exam_id.toLowerCase().includes(searchTerm.toLowerCase());
-        }
-        return true;
-      });
-
       setPagination(prev => ({
         ...prev,
-        total: filtered.length,
-        total_pages: Math.ceil(filtered.length / prev.per_page)
+        total: groups.length,
+        total_pages: Math.ceil(groups.length / prev.per_page)
       }));
     } catch (err) {
-      setError(err.message);
+      const msg = err.response?.data?.error?.message || err.message || 'Failed to load anomalies';
+      setError(msg);
       toast.error('Failed to load anomalies');
     } finally {
       setLoading(false);
