@@ -39,7 +39,6 @@ export default function NavBar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) setIsNotificationsOpen(false);
@@ -84,77 +83,109 @@ export default function NavBar() {
 
   return (
     <>
+      {/* CSS for pulse and nav-link hover */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.15); opacity: 0.85; }
+        }
+        @keyframes navGlow {
+          0%, 100% { box-shadow: 0 0 0 2px rgba(0,212,232,0.6), 0 0 20px rgba(0,212,232,0.35), 0 0 45px rgba(0,212,232,0.15); }
+          50% { box-shadow: 0 0 0 2px rgba(0,212,232,0.9), 0 0 28px rgba(0,212,232,0.55), 0 0 60px rgba(0,212,232,0.25); }
+        }
+        .logo-badge {
+          animation: navGlow 3s ease-in-out infinite;
+          transition: transform 0.3s ease;
+        }
+        .logo-badge:hover { transform: scale(1.07); }
+        .nav-link-item { position: relative; }
+        .nav-link-item::after {
+          content: '';
+          position: absolute;
+          bottom: -2px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 0;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, #00d4e8, transparent);
+          border-radius: 2px;
+          transition: width 0.25s ease;
+        }
+        .nav-link-item.active::after { width: 70%; }
+        .nav-link-item:hover::after { width: 50%; }
+      `}</style>
+
       <nav
         style={{
           background: scrolled
-            ? 'rgba(10, 17, 40, 0.97)'
-            : 'linear-gradient(135deg, #0a1128 0%, #0d1b3e 60%, #0a2a4a 100%)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(0, 212, 232, 0.12)',
-          boxShadow: scrolled ? '0 4px 32px rgba(0,0,0,0.4)' : '0 2px 16px rgba(0,0,0,0.2)',
-          transition: 'all 0.3s ease',
+            ? 'rgba(8, 14, 35, 0.97)'
+            : 'linear-gradient(135deg, #080e23 0%, #0b1530 50%, #071828 100%)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderBottom: scrolled
+            ? '1px solid rgba(0,212,232,0.18)'
+            : '1px solid rgba(0,212,232,0.1)',
+          boxShadow: scrolled
+            ? '0 8px 40px rgba(0,0,0,0.6), 0 1px 0 rgba(0,212,232,0.08)'
+            : '0 2px 20px rgba(0,0,0,0.3)',
+          transition: 'all 0.4s ease',
           position: 'sticky',
           top: 0,
           zIndex: 50,
         }}
       >
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 2xl:max-w-6xl">
-          <div className="flex justify-between items-center h-16">
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', height: '72px', gap: '24px' }}>
 
-            {/* Logo */}
+            {/* ── LOGO ── */}
             <Link
               to="/dashboard"
-              className="flex-shrink-0 flex items-center group"
-              style={{ textDecoration: 'none' }}
+              style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}
             >
+              {/* White badge — logo colors are preserved on white */}
               <div
+                className="logo-badge"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
                   background: '#ffffff',
-                  border: '2px solid rgba(0,212,232,0.4)',
-                  borderRadius: '14px',
-                  padding: '5px 14px 5px 8px',
-                  boxShadow: '0 0 0 3px rgba(0,212,232,0.12), 0 4px 16px rgba(0,0,0,0.3)',
-                  transition: 'all 0.3s ease',
+                  borderRadius: '16px',
+                  padding: '8px',
+                  flexShrink: 0,
+                  lineHeight: 0,
                 }}
-                className="group-hover:border-cyan-400 group-hover:shadow-cyan-400/30"
               >
                 <img
                   src="/logo-transparent.png"
                   alt="SmartScript"
-                  style={{
-                    height: '36px',
-                    width: 'auto',
-                    objectFit: 'contain',
-                    filter: 'drop-shadow(0 0 4px rgba(0,212,232,0.5))',
-                    transition: 'transform 0.3s ease',
-                  }}
-                  className="group-hover:scale-110"
+                  style={{ height: '48px', width: '48px', objectFit: 'contain', display: 'block' }}
                 />
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-                  <span style={{
-                    color: '#0a1128',
-                    fontWeight: 700,
-                    fontSize: '1rem',
-                    letterSpacing: '-0.01em',
-                  }}>SmartScript</span>
-                  <span style={{
-                    fontSize: '0.58rem',
-                    color: '#00a8b8',
-                    letterSpacing: '0.14em',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                  }}>AI Marking</span>
-                </div>
+              </div>
+
+              {/* Wordmark */}
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                <span style={{
+                  background: 'linear-gradient(90deg, #ffffff 0%, #a0e8f5 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  fontWeight: 800,
+                  fontSize: '1.2rem',
+                  letterSpacing: '-0.025em',
+                  display: 'block',
+                }}>SmartScript</span>
+                <span style={{
+                  fontSize: '0.6rem',
+                  letterSpacing: '0.18em',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  color: 'rgba(0,212,232,0.75)',
+                  display: 'block',
+                  marginTop: '1px',
+                }}>AI Marking</span>
               </div>
             </Link>
 
-
-
-            {/* Desktop Nav Links */}
-            <div className="hidden md:flex items-center space-x-1">
+            {/* ── NAV LINKS (desktop) ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flex: 1, justifyContent: 'center' }}>
               {navigation.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
@@ -162,59 +193,59 @@ export default function NavBar() {
                   <Link
                     key={item.name}
                     to={item.href}
-                    className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                    className={`nav-link-item${active ? ' active' : ''}`}
                     style={{
-                      color: active ? '#00d4e8' : 'rgba(180,210,240,0.8)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '7px 13px',
+                      borderRadius: '10px',
+                      fontSize: '0.8125rem',
+                      fontWeight: active ? 700 : 500,
+                      color: active ? '#00d4e8' : 'rgba(160,200,230,0.8)',
                       background: active
-                        ? 'rgba(0,212,232,0.1)'
+                        ? 'rgba(0,212,232,0.12)'
                         : 'transparent',
                       border: active
-                        ? '1px solid rgba(0,212,232,0.2)'
+                        ? '1px solid rgba(0,212,232,0.22)'
                         : '1px solid transparent',
+                      textDecoration: 'none',
+                      position: 'relative',
+                      transition: 'all 0.2s ease',
+                      whiteSpace: 'nowrap',
                     }}
                     onMouseEnter={e => {
                       if (!active) {
                         e.currentTarget.style.color = '#e0f7ff';
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
                       }
                     }}
                     onMouseLeave={e => {
                       if (!active) {
-                        e.currentTarget.style.color = 'rgba(180,210,240,0.8)';
+                        e.currentTarget.style.color = 'rgba(160,200,230,0.8)';
                         e.currentTarget.style.background = 'transparent';
                       }
                     }}
                   >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <Icon style={{ width: '15px', height: '15px', flexShrink: 0 }} />
                     <span>{item.name}</span>
-                    {active && (
-                      <span style={{
-                        position: 'absolute',
-                        bottom: '-1px',
-                        left: '20%',
-                        width: '60%',
-                        height: '2px',
-                        background: 'linear-gradient(90deg, transparent, #00d4e8, transparent)',
-                        borderRadius: '2px',
-                      }} />
-                    )}
                     {item.badge > 0 && (
                       <span style={{
                         position: 'absolute',
-                        top: '-4px',
-                        right: '-4px',
+                        top: '-5px',
+                        right: '-5px',
                         background: 'linear-gradient(135deg, #ff4757, #ff6b81)',
                         color: 'white',
-                        fontSize: '0.6rem',
-                        fontWeight: 700,
+                        fontSize: '0.58rem',
+                        fontWeight: 800,
                         borderRadius: '999px',
-                        minWidth: '16px',
-                        height: '16px',
+                        minWidth: '17px',
+                        height: '17px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        padding: '0 3px',
-                        boxShadow: '0 2px 8px rgba(255,71,87,0.5)',
+                        padding: '0 4px',
+                        boxShadow: '0 2px 10px rgba(255,71,87,0.6)',
                         animation: 'pulse 2s infinite',
                       }}>
                         {item.badge > 99 ? '99+' : item.badge}
@@ -225,38 +256,48 @@ export default function NavBar() {
               })}
             </div>
 
-            {/* Right side */}
-            <div className="hidden md:flex items-center gap-3">
+            {/* ── RIGHT SIDE ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
 
               {/* Notifications */}
-              <div className="relative" ref={notifRef}>
+              <div style={{ position: 'relative' }} ref={notifRef}>
                 <button
                   onClick={() => { setIsNotificationsOpen(!isNotificationsOpen); setIsUserMenuOpen(false); }}
-                  className="relative p-2 rounded-lg transition-all duration-200"
                   style={{
-                    color: 'rgba(180,210,240,0.8)',
+                    position: 'relative',
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'rgba(160,200,230,0.85)',
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.08)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
                   }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,232,0.1)'; e.currentTarget.style.borderColor = 'rgba(0,212,232,0.25)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
                 >
-                  <Bell className="w-5 h-5" />
+                  <Bell style={{ width: '18px', height: '18px' }} />
                   {unreadCount > 0 && (
                     <span style={{
                       position: 'absolute',
-                      top: '-3px',
-                      right: '-3px',
+                      top: '-4px',
+                      right: '-4px',
                       background: 'linear-gradient(135deg, #00d4e8, #0099aa)',
-                      color: '#0a1128',
-                      fontSize: '0.6rem',
+                      color: '#060d1f',
+                      fontSize: '0.58rem',
                       fontWeight: 800,
                       borderRadius: '999px',
-                      minWidth: '16px',
-                      height: '16px',
+                      minWidth: '17px',
+                      height: '17px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       padding: '0 3px',
-                      boxShadow: '0 2px 8px rgba(0,212,232,0.5)',
+                      boxShadow: '0 2px 10px rgba(0,212,232,0.6)',
                     }}>
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
@@ -267,27 +308,21 @@ export default function NavBar() {
                   <div style={{
                     position: 'absolute',
                     right: 0,
-                    top: 'calc(100% + 8px)',
+                    top: 'calc(100% + 10px)',
                     width: '320px',
-                    background: 'linear-gradient(135deg, #0d1b3e, #0a2a4a)',
+                    background: 'linear-gradient(160deg, #0d1b3e 0%, #091726 100%)',
                     border: '1px solid rgba(0,212,232,0.2)',
-                    borderRadius: '12px',
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,212,232,0.05)',
+                    borderRadius: '14px',
+                    boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,232,0.05)',
                     overflow: 'hidden',
                     zIndex: 100,
                   }}>
-                    <div style={{
-                      padding: '12px 16px',
-                      borderBottom: '1px solid rgba(0,212,232,0.1)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}>
-                      <span style={{ color: '#e0f7ff', fontWeight: 600, fontSize: '0.875rem' }}>Notifications</span>
+                    <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(0,212,232,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#e0f7ff', fontWeight: 700, fontSize: '0.875rem' }}>Notifications</span>
                       {unreadCount > 0 && (
                         <button
                           onClick={() => { markAllAsRead(); setIsNotificationsOpen(false); }}
-                          style={{ color: '#00d4e8', fontSize: '0.75rem', fontWeight: 500 }}
+                          style={{ color: '#00d4e8', fontSize: '0.75rem', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
                         >
                           Mark all read
                         </button>
@@ -295,7 +330,7 @@ export default function NavBar() {
                     </div>
                     <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
                       {notifications.length === 0 ? (
-                        <div style={{ padding: '32px 16px', textAlign: 'center', color: 'rgba(180,210,240,0.5)', fontSize: '0.875rem' }}>
+                        <div style={{ padding: '36px 18px', textAlign: 'center', color: 'rgba(160,200,230,0.45)', fontSize: '0.875rem' }}>
                           No notifications
                         </div>
                       ) : notifications.map((n) => (
@@ -303,7 +338,7 @@ export default function NavBar() {
                           key={n.id}
                           onClick={() => { if (!n.is_read && !n.read) markAsRead(n.id); }}
                           style={{
-                            padding: '10px 16px',
+                            padding: '11px 18px',
                             borderBottom: '1px solid rgba(255,255,255,0.04)',
                             cursor: 'pointer',
                             background: (!n.is_read && !n.read) ? 'rgba(0,212,232,0.06)' : 'transparent',
@@ -311,14 +346,14 @@ export default function NavBar() {
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <p style={{ fontSize: '0.8125rem', color: (!n.is_read && !n.read) ? '#e0f7ff' : 'rgba(180,210,240,0.7)', fontWeight: (!n.is_read && !n.read) ? 600 : 400, margin: 0 }}>
+                            <p style={{ fontSize: '0.8125rem', color: (!n.is_read && !n.read) ? '#e0f7ff' : 'rgba(160,200,230,0.7)', fontWeight: (!n.is_read && !n.read) ? 600 : 400, margin: 0 }}>
                               {n.title}
                             </p>
-                            <span style={{ fontSize: '0.7rem', color: 'rgba(180,210,240,0.4)', marginLeft: '8px', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.7rem', color: 'rgba(160,200,230,0.4)', marginLeft: '8px', whiteSpace: 'nowrap' }}>
                               {new Date(n.created_at).toLocaleDateString()}
                             </span>
                           </div>
-                          <p style={{ fontSize: '0.75rem', color: 'rgba(180,210,240,0.5)', margin: '3px 0 0', lineHeight: 1.4 }}>{n.message}</p>
+                          <p style={{ fontSize: '0.75rem', color: 'rgba(160,200,230,0.5)', margin: '3px 0 0', lineHeight: 1.4 }}>{n.message}</p>
                         </div>
                       ))}
                     </div>
@@ -327,102 +362,126 @@ export default function NavBar() {
               </div>
 
               {/* Divider */}
-              <div style={{ width: '1px', height: '28px', background: 'rgba(0,212,232,0.15)' }} />
+              <div style={{ width: '1px', height: '30px', background: 'rgba(0,212,232,0.12)' }} />
 
               {/* User menu */}
-              <div className="relative" ref={userRef}>
+              <div style={{ position: 'relative' }} ref={userRef}>
                 <button
                   onClick={() => { setIsUserMenuOpen(!isUserMenuOpen); setIsNotificationsOpen(false); }}
-                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all duration-200"
                   style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '6px 12px 6px 6px',
+                    borderRadius: '12px',
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(0,212,232,0.15)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
                   }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,232,0.08)'; e.currentTarget.style.borderColor = 'rgba(0,212,232,0.3)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(0,212,232,0.15)'; }}
                 >
                   {/* Avatar */}
                   <div style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #00d4e8, #0077aa)',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '9px',
+                    background: 'linear-gradient(135deg, #00d4e8 0%, #0066aa 100%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '0.7rem',
+                    fontSize: '0.72rem',
                     fontWeight: 800,
-                    color: '#0a1128',
+                    color: '#060d1f',
                     flexShrink: 0,
+                    boxShadow: '0 2px 10px rgba(0,212,232,0.35)',
                   }}>
                     {userInitials}
                   </div>
-                  <div className="text-left">
-                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#e0f7ff', lineHeight: 1.2 }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e0f7ff', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
                       {user ? `${user.first_name} ${user.last_name}` : 'User'}
                     </div>
-                    <div style={{ fontSize: '0.65rem', color: '#00d4e8', lineHeight: 1 }}>
+                    <div style={{ fontSize: '0.65rem', color: 'rgba(0,212,232,0.8)', lineHeight: 1, marginTop: '1px' }}>
                       {devMode === 'custom' || user?.plan === 'enterprise' ? 'Organization' : `${user?.credits || 0} credits`}
                     </div>
                   </div>
-                  <ChevronDown className="w-3.5 h-3.5" style={{ color: 'rgba(0,212,232,0.6)', transition: 'transform 0.2s', transform: isUserMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                  <ChevronDown style={{ width: '14px', height: '14px', color: 'rgba(0,212,232,0.6)', transition: 'transform 0.2s', transform: isUserMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                 </button>
 
                 {isUserMenuOpen && (
                   <div style={{
                     position: 'absolute',
                     right: 0,
-                    top: 'calc(100% + 8px)',
-                    width: '180px',
-                    background: 'linear-gradient(135deg, #0d1b3e, #0a2a4a)',
+                    top: 'calc(100% + 10px)',
+                    width: '186px',
+                    background: 'linear-gradient(160deg, #0d1b3e 0%, #091726 100%)',
                     border: '1px solid rgba(0,212,232,0.2)',
-                    borderRadius: '12px',
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                    borderRadius: '14px',
+                    boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
                     overflow: 'hidden',
                     zIndex: 100,
-                    padding: '4px',
+                    padding: '5px',
                   }}>
                     <Link
                       to="/account"
                       onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-150"
-                      style={{ color: 'rgba(180,210,240,0.9)', fontSize: '0.875rem' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,212,232,0.08)'}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '10px 12px', borderRadius: '10px',
+                        color: 'rgba(160,200,230,0.9)', fontSize: '0.875rem',
+                        fontWeight: 500, textDecoration: 'none',
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,212,232,0.09)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      <Settings className="w-4 h-4" style={{ color: '#00d4e8' }} />
+                      <Settings style={{ width: '16px', height: '16px', color: '#00d4e8' }} />
                       Account
                     </Link>
                     <button
                       onClick={() => { logout(); setIsUserMenuOpen(false); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-150"
-                      style={{ color: '#ff6b81', fontSize: '0.875rem' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,71,87,0.08)'}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '10px 12px', borderRadius: '10px',
+                        color: '#ff6b81', fontSize: '0.875rem',
+                        fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer',
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,71,87,0.09)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      <LogOut className="w-4 h-4" />
+                      <LogOut style={{ width: '16px', height: '16px' }} />
                       Logout
                     </button>
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Mobile menu button */}
-            <button
-              className="md:hidden p-2 rounded-lg"
-              style={{ color: '#00d4e8', background: 'rgba(0,212,232,0.08)', border: '1px solid rgba(0,212,232,0.15)' }}
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+              {/* Mobile toggle */}
+              <button
+                className="md:hidden"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                style={{
+                  width: '38px', height: '38px', borderRadius: '10px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#00d4e8', background: 'rgba(0,212,232,0.08)',
+                  border: '1px solid rgba(0,212,232,0.2)', cursor: 'pointer',
+                }}
+              >
+                {isMobileMenuOpen ? <X style={{ width: '18px', height: '18px' }} /> : <Menu style={{ width: '18px', height: '18px' }} />}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Mobile menu */}
         {isMobileMenuOpen && (
           <div style={{
-            background: 'rgba(10,17,40,0.98)',
+            background: 'rgba(8,14,35,0.98)',
             borderTop: '1px solid rgba(0,212,232,0.1)',
-            padding: '8px 16px 16px',
+            padding: '8px 16px 18px',
           }}>
             {navigation.map((item) => {
               const Icon = item.icon;
@@ -432,18 +491,19 @@ export default function NavBar() {
                   key={item.name}
                   to={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-3 rounded-lg mb-1 relative"
                   style={{
-                    color: active ? '#00d4e8' : 'rgba(180,210,240,0.8)',
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    padding: '12px 14px', borderRadius: '10px', marginBottom: '3px',
+                    color: active ? '#00d4e8' : 'rgba(160,200,230,0.8)',
                     background: active ? 'rgba(0,212,232,0.1)' : 'transparent',
-                    fontSize: '0.9375rem',
-                    fontWeight: active ? 600 : 400,
+                    fontSize: '0.9375rem', fontWeight: active ? 700 : 400,
+                    textDecoration: 'none', position: 'relative',
                   }}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon style={{ width: '18px', height: '18px' }} />
                   {item.name}
                   {item.badge > 0 && (
-                    <span style={{ marginLeft: 'auto', background: 'linear-gradient(135deg,#ff4757,#ff6b81)', color: 'white', fontSize: '0.65rem', fontWeight: 700, borderRadius: '999px', padding: '1px 6px' }}>
+                    <span style={{ marginLeft: 'auto', background: 'linear-gradient(135deg,#ff4757,#ff6b81)', color: 'white', fontSize: '0.65rem', fontWeight: 700, borderRadius: '999px', padding: '2px 7px' }}>
                       {item.badge}
                     </span>
                   )}
@@ -453,10 +513,14 @@ export default function NavBar() {
             <div style={{ borderTop: '1px solid rgba(0,212,232,0.1)', marginTop: '8px', paddingTop: '8px' }}>
               <button
                 onClick={() => { logout(); setIsMobileMenuOpen(false); }}
-                className="flex items-center gap-3 px-3 py-3 rounded-lg w-full"
-                style={{ color: '#ff6b81', fontSize: '0.9375rem' }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '12px 14px', borderRadius: '10px', width: '100%',
+                  color: '#ff6b81', fontSize: '0.9375rem',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                }}
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut style={{ width: '18px', height: '18px' }} />
                 Logout
               </button>
             </div>
