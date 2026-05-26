@@ -15,9 +15,8 @@ export default function PublicNavbar() {
       <div className="relative mx-auto max-w-7xl px-6">
         <div className="flex items-center justify-between py-4">
           {/* Brand */}
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/logo-transparent.png" alt="SmartScript Logo" className="h-9 w-9 object-contain drop-shadow-lg" />
-            <span className="text-lg font-semibold tracking-tight">SmartScript</span>
+          <Link to="/" className="flex items-center">
+            <img src="/logo-transparent.png" alt="SmartScript Logo" style={{ height: '48px', width: 'auto', objectFit: 'contain' }} />
           </Link>
 
           {/* Desktop nav */}

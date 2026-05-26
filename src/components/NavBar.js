@@ -102,29 +102,15 @@ export default function NavBar() {
           <div className="flex justify-between items-center h-16">
 
             {/* Logo */}
-            <Link to="/dashboard" className="flex-shrink-0 flex items-center gap-3 group">
+            <Link to="/dashboard" className="flex-shrink-0 flex items-center group">
               <img
                 src="/logo-transparent.png"
                 alt="SmartScript"
-                className="h-10 w-10 object-contain transition-transform duration-300 group-hover:scale-110"
+                style={{ height: '48px', width: 'auto', objectFit: 'contain', transition: 'transform 0.3s ease' }}
+                className="group-hover:scale-105"
               />
-              <div className="flex flex-col leading-none">
-                <span style={{
-                  background: 'linear-gradient(90deg, #00d4e8, #4fc3f7, #e0f7ff)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  fontWeight: 800,
-                  fontSize: '1.15rem',
-                  letterSpacing: '-0.02em',
-                  lineHeight: 1.1,
-                }}>
-                  SmartScript
-                </span>
-                <span style={{ fontSize: '0.6rem', color: 'rgba(0,212,232,0.6)', letterSpacing: '0.12em', fontWeight: 500 }}>
-                  AI MARKING
-                </span>
-              </div>
             </Link>
+
 
             {/* Desktop Nav Links */}
             <div className="hidden md:flex items-center space-x-1">
