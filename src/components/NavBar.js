@@ -106,7 +106,13 @@ export default function NavBar() {
               <img
                 src="/logo-transparent.png"
                 alt="SmartScript"
-                style={{ height: '48px', width: 'auto', objectFit: 'contain', transition: 'transform 0.3s ease' }}
+                style={{
+                  height: '48px',
+                  width: 'auto',
+                  objectFit: 'contain',
+                  transition: 'transform 0.3s ease, filter 0.3s ease',
+                  filter: 'drop-shadow(0 0 6px rgba(0,212,232,0.7)) drop-shadow(0 0 14px rgba(0,212,232,0.35))'
+                }}
                 className="group-hover:scale-105"
               />
             </Link>
