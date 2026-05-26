@@ -89,15 +89,10 @@ export default function NavBar() {
           0%, 100% { transform: scale(1); opacity: 1; }
           50% { transform: scale(1.15); opacity: 0.85; }
         }
-        @keyframes navGlow {
-          0%, 100% { box-shadow: 0 0 0 2px rgba(0,212,232,0.6), 0 0 20px rgba(0,212,232,0.35), 0 0 45px rgba(0,212,232,0.15); }
-          50% { box-shadow: 0 0 0 2px rgba(0,212,232,0.9), 0 0 28px rgba(0,212,232,0.55), 0 0 60px rgba(0,212,232,0.25); }
-        }
         .logo-badge {
-          animation: navGlow 3s ease-in-out infinite;
-          transition: transform 0.3s ease;
+          transition: transform 0.3s ease, filter 0.3s ease;
         }
-        .logo-badge:hover { transform: scale(1.07); }
+        .logo-badge:hover { transform: scale(1.08); }
         .nav-link-item { position: relative; }
         .nav-link-item::after {
           content: '';
@@ -142,23 +137,20 @@ export default function NavBar() {
               to="/dashboard"
               style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}
             >
-              {/* White badge — logo colors are preserved on white */}
-              <div
+              {/* Dark-mode logo — navy replaced with white, teal preserved */}
+              <img
+                src="/logo-dark-mode.png"
+                alt="SmartScript"
                 className="logo-badge"
                 style={{
-                  background: '#ffffff',
-                  borderRadius: '16px',
-                  padding: '8px',
+                  height: '52px',
+                  width: '52px',
+                  objectFit: 'contain',
+                  display: 'block',
                   flexShrink: 0,
-                  lineHeight: 0,
+                  filter: 'drop-shadow(0 0 6px rgba(0,212,232,0.45)) drop-shadow(0 0 2px rgba(255,255,255,0.15))',
                 }}
-              >
-                <img
-                  src="/logo-transparent.png"
-                  alt="SmartScript"
-                  style={{ height: '48px', width: '48px', objectFit: 'contain', display: 'block' }}
-                />
-              </div>
+              />
 
               {/* Wordmark */}
               <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
