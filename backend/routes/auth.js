@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const express = require('express');
 const jwt = require('jsonwebtoken');
@@ -35,11 +35,39 @@ router.post('/login', (req, res) => {
 
   return res.json({
     success: true,
-    data: {
-      token,
-      refresh_token,
-      user
-    }
+    data: { token, refresh_token, user }
+  });
+});
+
+// POST /api/v1/auth/register
+router.post('/register', (req, res) => {
+  const { email, password, first_name, last_name, plan } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, error: { message: 'Email is required' } });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ success: false, error: { message: 'Password must be at least 6 characters' } });
+  }
+
+  // Build user from provided fields or derive from email
+  const parts = email.split('@')[0].split('.');
+  const user = {
+    id: `user-${uuidv4()}`,
+    email,
+    first_name: first_name || (parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : 'User'),
+    last_name: last_name || (parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : ''),
+    role: 'admin',
+    credits: 1000,
+    plan: plan || 'pro',
+    tenant_id: `tenant-${uuidv4()}`
+  };
+
+  const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+  const refresh_token = jwt.sign({ id: user.id, type: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
+
+  return res.status(201).json({
+    success: true,
+    data: { token, refresh_token, user }
   });
 });
 
