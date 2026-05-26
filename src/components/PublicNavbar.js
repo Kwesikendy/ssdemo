@@ -16,7 +16,7 @@ export default function PublicNavbar() {
         <div className="flex items-center justify-between py-4">
           {/* Brand */}
           <Link to="/" className="flex items-center gap-2">
-            <img src="/logo.jpg" alt="SmartScript Logo" className="h-9 w-9 object-contain drop-shadow-lg" style={{ mixBlendMode: 'multiply' }} />
+            <img src="/logo-transparent.png" alt="SmartScript Logo" className="h-9 w-9 object-contain drop-shadow-lg" />
             <span className="text-lg font-semibold tracking-tight">SmartScript</span>
           </Link>
 

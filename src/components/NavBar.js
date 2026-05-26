@@ -104,10 +104,9 @@ export default function NavBar() {
             {/* Logo */}
             <Link to="/dashboard" className="flex-shrink-0 flex items-center gap-3 group">
               <img
-                src="/logo.jpg"
+                src="/logo-transparent.png"
                 alt="SmartScript"
                 className="h-10 w-10 object-contain transition-transform duration-300 group-hover:scale-110"
-                style={{ mixBlendMode: 'multiply' }}
               />
               <div className="flex flex-col leading-none">
                 <span style={{
