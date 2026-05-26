@@ -102,20 +102,58 @@ export default function NavBar() {
           <div className="flex justify-between items-center h-16">
 
             {/* Logo */}
-            <Link to="/dashboard" className="flex-shrink-0 flex items-center group">
-              <img
-                src="/logo-transparent.png"
-                alt="SmartScript"
+            <Link
+              to="/dashboard"
+              className="flex-shrink-0 flex items-center group"
+              style={{ textDecoration: 'none' }}
+            >
+              <div
                 style={{
-                  height: '48px',
-                  width: 'auto',
-                  objectFit: 'contain',
-                  transition: 'transform 0.3s ease, filter 0.3s ease',
-                  filter: 'drop-shadow(0 0 6px rgba(0,212,232,0.7)) drop-shadow(0 0 14px rgba(0,212,232,0.35))'
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(0,212,232,0.08) 100%)',
+                  border: '1px solid rgba(0,212,232,0.35)',
+                  borderRadius: '14px',
+                  padding: '5px 14px 5px 8px',
+                  boxShadow: '0 0 12px rgba(0,212,232,0.15), inset 0 1px 0 rgba(255,255,255,0.06)',
+                  transition: 'all 0.3s ease',
+                  backdropFilter: 'blur(8px)',
                 }}
-                className="group-hover:scale-105"
-              />
+                className="group-hover:border-cyan-400 group-hover:shadow-cyan-400/30"
+              >
+                <img
+                  src="/logo-transparent.png"
+                  alt="SmartScript"
+                  style={{
+                    height: '36px',
+                    width: 'auto',
+                    objectFit: 'contain',
+                    filter: 'drop-shadow(0 0 4px rgba(0,212,232,0.5))',
+                    transition: 'transform 0.3s ease',
+                  }}
+                  className="group-hover:scale-110"
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+                  <span style={{
+                    background: 'linear-gradient(90deg, #ffffff, #a8efff)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    letterSpacing: '-0.01em',
+                  }}>SmartScript</span>
+                  <span style={{
+                    fontSize: '0.58rem',
+                    color: 'rgba(0,212,232,0.7)',
+                    letterSpacing: '0.14em',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                  }}>AI Marking</span>
+                </div>
+              </div>
             </Link>
+
 
 
             {/* Desktop Nav Links */}
