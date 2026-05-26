@@ -112,13 +112,12 @@ export default function NavBar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(0,212,232,0.08) 100%)',
-                  border: '1px solid rgba(0,212,232,0.35)',
+                  background: '#ffffff',
+                  border: '2px solid rgba(0,212,232,0.4)',
                   borderRadius: '14px',
                   padding: '5px 14px 5px 8px',
-                  boxShadow: '0 0 12px rgba(0,212,232,0.15), inset 0 1px 0 rgba(255,255,255,0.06)',
+                  boxShadow: '0 0 0 3px rgba(0,212,232,0.12), 0 4px 16px rgba(0,0,0,0.3)',
                   transition: 'all 0.3s ease',
-                  backdropFilter: 'blur(8px)',
                 }}
                 className="group-hover:border-cyan-400 group-hover:shadow-cyan-400/30"
               >
@@ -136,18 +135,16 @@ export default function NavBar() {
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
                   <span style={{
-                    background: 'linear-gradient(90deg, #ffffff, #a8efff)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
+                    color: '#0a1128',
                     fontWeight: 700,
                     fontSize: '1rem',
                     letterSpacing: '-0.01em',
                   }}>SmartScript</span>
                   <span style={{
                     fontSize: '0.58rem',
-                    color: 'rgba(0,212,232,0.7)',
+                    color: '#00a8b8',
                     letterSpacing: '0.14em',
-                    fontWeight: 500,
+                    fontWeight: 600,
                     textTransform: 'uppercase',
                   }}>AI Marking</span>
                 </div>
