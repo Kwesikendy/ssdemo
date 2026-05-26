@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import api from '../api/axios';
 
 export default function NavBar() {
   const { logout, user, devMode } = useAuth();
@@ -50,14 +51,9 @@ export default function NavBar() {
 
   const fetchAnomalyCount = async () => {
     try {
-      const response = await fetch('/api/v1/anomalies/groups', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const total = data.data?.reduce((sum, g) => sum + (g.anomaly_count || 0), 0) || 0;
-        setAnomalyCount(total);
-      }
+      const { data } = await api.get('/anomalies/groups');
+      const total = data.data?.reduce((sum, g) => sum + (g.anomaly_count || 0), 0) || 0;
+      setAnomalyCount(total);
     } catch (e) {}
   };
 
@@ -107,17 +103,11 @@ export default function NavBar() {
 
             {/* Logo */}
             <Link to="/dashboard" className="flex-shrink-0 flex items-center gap-3 group">
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(0,212,232,0.15), rgba(13,27,62,0.4))',
-                border: '1px solid rgba(0,212,232,0.25)',
-                borderRadius: '10px',
-                padding: '4px',
-                transition: 'all 0.3s ease',
-              }}
-              className="group-hover:border-cyan-400/50"
-              >
-                <img src="/logo.png" alt="SmartScript" className="h-8 w-8 object-contain" />
-              </div>
+              <img
+                src="/logo.png"
+                alt="SmartScript"
+                className="h-10 w-10 object-contain transition-transform duration-300 group-hover:scale-110"
+              />
               <div className="flex flex-col leading-none">
                 <span style={{
                   background: 'linear-gradient(90deg, #00d4e8, #4fc3f7, #e0f7ff)',
