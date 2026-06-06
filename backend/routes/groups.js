@@ -21,7 +21,7 @@ const upload = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'];
+    const allowed = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.txt'];
     if (allowed.includes(path.extname(file.originalname).toLowerCase())) cb(null, true);
     else cb(new Error('Only PDF and image files are allowed'));
   }
@@ -129,8 +129,9 @@ router.post('/:id/uploads', upload.array('files', 50), async (req, res) => {
       .trim() || `Candidate ${totalExisting + i + 1}`;
     const candidateNumber = `SS${String(totalExisting + i + 1).padStart(3, '0')}`;
 
-    // Try to extract text from PDF
+    // Try to extract text from PDF or TXT
     let scriptText = `Exam script for ${baseName}.`;
+    let is_txt_upload = false;
     const ext = path.extname(file.originalname).toLowerCase();
     if (ext === '.pdf') {
       try {
@@ -141,11 +142,19 @@ router.post('/:id/uploads', upload.array('files', 50), async (req, res) => {
       } catch (e) {
         console.error('PDF extract error:', e.message);
       }
+    } else if (ext === '.txt') {
+      try {
+        const fs = require('fs');
+        scriptText = fs.readFileSync(file.path, 'utf8');
+        is_txt_upload = true;
+      } catch (e) {
+        console.error('TXT read error:', e.message);
+      }
     }
 
     const candidate = {
       id: candidateId, name: baseName, candidate_number: candidateNumber,
-      group_id: groupId, upload_id: uploadId, script_text: scriptText,
+      group_id: groupId, upload_id: uploadId, script_text: scriptText, is_txt_upload: is_txt_upload,
       result: null, status: 'pending', page_count: 1, bound_pages: 1,
       tenant_id: req.user.tenant_id || 'demo-tenant', created_at: now, updated_at: now
     };
@@ -205,8 +214,41 @@ router.post('/:id/marking-jobs/start', async (req, res) => {
         const candidate = groupCandidates[i];
         updateJob({ progress: Math.round((i / total) * 85), status_message: `Marking ${candidate.name} (${i + 1}/${total})...` });
         try {
-          const scriptText = candidate.script_text || `Student answers for ${candidate.name}`;
-          const result = await markScript(groupScheme.scheme_text, scriptText, groupScheme.custom_instructions);
+          let result;
+          if (candidate.is_txt_upload && candidate.script_text && candidate.script_text.includes('=====')) {
+            const parts = candidate.script_text.split('=====');
+            const scoreCsv = parts[1] ? parts[1].trim() : '';
+            const questionCsv = parts[2] ? parts[2].trim() : '';
+            
+            const scoreLines = scoreCsv.split('\n').filter(l => l.trim());
+            const questionLines = questionCsv.split('\n').filter(l => l.trim());
+            
+            const totalScore = scoreLines.length > 1 ? parseFloat(scoreLines[1].split(',')[1]) : 0;
+            
+            const questions = questionLines.slice(1).map(line => {
+              const cols = line.split(',');
+              return {
+                question_number: parseInt(cols[0]),
+                awarded: parseFloat(cols[1]),
+                max_marks: parseFloat(cols[2]),
+                feedback: cols[3] ? cols[3].trim() : ''
+              };
+            });
+            
+            const maxScore = questions.reduce((sum, q) => sum + q.max_marks, 0);
+            const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+            
+            result = {
+              total_score: totalScore,
+              max_score: maxScore,
+              percentage: percentage,
+              questions: questions,
+              overall_feedback: `Score: ${totalScore}/${maxScore} (${percentage}%)`
+            };
+          } else {
+            const scriptText = candidate.script_text || `Student answers for ${candidate.name}`;
+            result = await markScript(groupScheme.scheme_text, scriptText, groupScheme.custom_instructions);
+          }
           candidate.result = result; candidate.status = 'marked'; candidate.updated_at = new Date().toISOString();
           candidates.set(candidate.id, candidate);
           const up = uploads.get(candidate.upload_id);

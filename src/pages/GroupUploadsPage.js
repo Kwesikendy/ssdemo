@@ -381,11 +381,11 @@ export default function GroupUploadsPage() {
           <form onSubmit={handleSubmitUpload} className="space-y-4">
             {/* Mode is always 'images' - PDF support removed */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Files (PDF or Images)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Upload File</label>
               <input
                 type="file"
                 multiple
-                accept=".pdf,image/*"
+                accept=".pdf,image/*,.txt"
                 onChange={(e) => setFiles(Array.from(e.target.files || []))}
                 className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
               />

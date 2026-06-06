@@ -1,0 +1,46 @@
+General Knowledge Course Examination
+
+What is photosynthesis?
+The natural process where green plants turn sunlight, water, and carbon dioxide into nutrients.
+
+Name the largest ocean on Earth.
+The Pacific Ocean.
+
+What causes a solar eclipse?
+It happens when the moon passes directly between the Earth and the sun, casting a shadow on Earth.
+
+Who wrote the play "Romeo and Juliet"?
+Shakespeare.
+
+Why do humans need oxygen?
+Our bodies need it to convert glucose into energy at a cellular level, which keeps our organs functioning.
+
+What is the capital city of France?
+Paris.
+
+What is the main function of the human heart?
+To pump oxygen-rich blood throughout the body's circulatory system.
+
+Define the term "gravity".
+The force that pulls things down to the ground.
+
+How many continents are there on Earth?
+Five.
+
+What is the primary language spoken in Brazil?
+Spanish.
+=====
+index, score
+244234256, 70
+=====
+question, score, max_marks, feedback
+1, 10, 10, Correct - excellent definition of photosynthesis
+2, 10, 10, Correct - the Pacific Ocean
+3, 10, 10, Correct - well explained solar eclipse
+4, 10, 10, Correct - Shakespeare
+5, 10, 10, Correct - detailed understanding of cellular respiration
+6, 10, 10, Correct - Paris
+7, 10, 10, Correct - accurate description of heart function
+8, 0, 10, Incorrect - too simplistic, gravity is universal attraction between masses
+9, 0, 10, Incorrect - there are 7 continents
+10, 0, 10, Incorrect - Portuguese is the primary language in Brazil

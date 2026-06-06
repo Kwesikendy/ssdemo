@@ -284,7 +284,7 @@ export default function CandidatePagesView() {
                     <h4 className="text-sm font-medium text-gray-700 mb-2">OCR Text</h4>
                     <div className="border border-gray-200 rounded-lg p-4 h-64 overflow-y-auto">
                       <pre className="text-sm text-gray-900 whitespace-pre-wrap font-mono">
-                        {selectedPage.ocr_text || 'No OCR text available'}
+                        {(selectedPage.ocr_text || '').split('=====')[0].trim() || 'No OCR text available'}
                       </pre>
                     </div>
                     <div className="mt-2 text-xs text-gray-500">
